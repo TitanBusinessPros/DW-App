@@ -1,0 +1,223 @@
+rules_version = '2';
+
+// Draft v1 — adapted from a sibling Firebase project's security-rule patterns
+// (field-scoped update branches, approval gating, rate-limit collections).
+// See docs/ARCHITECTURE.md for the full collection map and open decisions.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnerUid(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // A profile counts as "approved" once an admin has cleared it (or it
+    // auto-approved and hasn't been flagged/rejected since).
+    function isApproved(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+          && get(/databases/$(database)/documents/users/$(uid)).data.approved == true;
+    }
+
+    function isBlockedPair(uidA, uidB) {
+      let pairId = uidA < uidB ? uidA + '_' + uidB : uidB + '_' + uidA;
+      return exists(/databases/$(database)/documents/blocks/$(pairId));
+    }
+
+    // ---------------------------------------------------------------------
+    // Admin allowlist — written only via Admin SDK / console, never by users.
+    // ---------------------------------------------------------------------
+    match /admins/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // users/{uid} — core identity for both owners and walkers.
+    // ---------------------------------------------------------------------
+    match /users/{uid} {
+      allow read: if (isSignedIn() && isApproved(request.auth.uid) && resource.data.approved == true)
+                  || isOwnerUid(uid) || isAdmin();
+
+      allow create: if isOwnerUid(uid)
+                    && request.resource.data.approved == false
+                    && request.resource.data.everApproved == false;
+
+      allow update: if isAdmin()
+                    // Profile edits (name/photo/bio/role/location) — self-service,
+                    // blocked once a SafeSearch flag is sitting on the current doc.
+                    || (isOwnerUid(uid)
+                        && (request.resource.data.approved == false
+                            || (request.resource.data.approved == true
+                                && request.resource.data.everApproved == true
+                                && request.resource.data.get('rejected', false) == false
+                                && resource.data.get('safeSearchFlag', {}).get('flagged', false) == false))
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['profile', 'role', 'lastEditedAt', 'photo', 'approved', 'everApproved', 'rejected']))
+                    // Admin/consent fields — always writable regardless of approval.
+                    || (isOwnerUid(uid)
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['lastActiveAt', 'agreedToTerms', 'agreedToTermsAt']))
+                    // Notification settings — gated on approval, same as the source project.
+                    || (isOwnerUid(uid)
+                        && isApproved(uid)
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['notificationsEnabled', 'fcmTokens']));
+
+      allow delete: if isOwnerUid(uid) || isAdmin();
+    }
+
+    // ---------------------------------------------------------------------
+    // walkerProfiles/{uid} — the paid, public-facing walker listing.
+    // listingPaidUntil is Stripe-webhook/admin-only, mirrors businessPaidUntil.
+    // ---------------------------------------------------------------------
+    match /walkerProfiles/{uid} {
+      allow read: if (isSignedIn() && isApproved(request.auth.uid) && resource.data.approved == true)
+                  || isOwnerUid(uid) || isAdmin();
+
+      allow create: if isOwnerUid(uid)
+                    && request.resource.data.approved == false
+                    && request.resource.data.everApproved == false
+                    && request.resource.data.get('listingPaidUntil', null) == null;
+
+      allow update: if isAdmin()
+                    || (isOwnerUid(uid)
+                        && (request.resource.data.approved == false
+                            || (request.resource.data.approved == true
+                                && request.resource.data.everApproved == true
+                                && request.resource.data.get('rejected', false) == false
+                                && resource.data.get('safeSearchFlag', {}).get('flagged', false) == false))
+                        && request.resource.data.get('listingPaidUntil', null) == resource.data.get('listingPaidUntil', null)
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['bio', 'serviceRadius', 'hourlyRate', 'availability', 'lastEditedAt', 'photo', 'approved', 'everApproved', 'rejected']));
+
+      allow delete: if isOwnerUid(uid) || isAdmin();
+    }
+
+    // ---------------------------------------------------------------------
+    // dogs/{dogId} — owned by a single user (the dog's owner).
+    // ---------------------------------------------------------------------
+    match /dogs/{dogId} {
+      allow read: if isSignedIn()
+                  && (resource.data.ownerId == request.auth.uid
+                      || isAdmin()
+                      // a walker with an active booking for this dog can read it —
+                      // enforced app-side by only surfacing dogIds from their own bookings;
+                      // revisit if this needs to be a hard rule guarantee later.
+                      || isApproved(request.auth.uid));
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid || isAdmin();
+    }
+
+    // ---------------------------------------------------------------------
+    // conversations/{ownerUid}_{walkerUid} — 1:1 DMs.
+    // ---------------------------------------------------------------------
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create, update: if isSignedIn()
+                            && request.auth.uid in request.resource.data.participants
+                            && request.resource.data.participants.size() == 2;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && request.auth.uid in conversationId.split('_');
+        allow create: if isSignedIn()
+                      && (isApproved(request.auth.uid) || isAdmin())
+                      && request.resource.data.senderId == request.auth.uid
+                      && request.auth.uid in conversationId.split('_')
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 1000
+                      && !exists(/databases/$(database)/documents/blocks/$(conversationId));
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // bookings/{bookingId} — a walk request and its lifecycle.
+    // Only the owner or the walker on the booking can read/act on it.
+    // Status transitions are enforced app-side by Cloud Functions for now;
+    // revisit locking down valid status transitions in rules once the
+    // booking flow is built out.
+    // ---------------------------------------------------------------------
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn()
+                  && (request.auth.uid == resource.data.ownerId
+                      || request.auth.uid == resource.data.walkerId
+                      || isAdmin());
+
+      allow create: if isSignedIn()
+                    && isApproved(request.auth.uid)
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.status == 'requested'
+                    && !isBlockedPair(request.resource.data.ownerId, request.resource.data.walkerId);
+
+      allow update: if isSignedIn()
+                    && (request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.walkerId)
+                    // core booking terms are immutable once created — only status/notes move
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'notes', 'lastEditedAt']);
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------------
+    // reviews/{reviewId} — one review per completed booking, by the owner.
+    // ---------------------------------------------------------------------
+    match /reviews/{reviewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.reviewerId == request.auth.uid
+                    && request.resource.data.rating is int
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5;
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------------
+    // Safety: blocks / reports / bug reports — write-your-own, admin reads all.
+    // ---------------------------------------------------------------------
+    match /blocks/{pairId} {
+      allow read: if isSignedIn() && request.auth.uid in pairId.split('_');
+      allow create: if isSignedIn() && request.auth.uid in pairId.split('_');
+      allow delete: if isSignedIn() && request.auth.uid in pairId.split('_');
+      allow update: if false;
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /bugReports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------------
+    // Rate limits — written only by Cloud Functions (Admin SDK bypasses rules).
+    // ---------------------------------------------------------------------
+    match /messageLimits/{uid} {
+      allow read: if isOwnerUid(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    match /bookingLimits/{uid} {
+      allow read: if isOwnerUid(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

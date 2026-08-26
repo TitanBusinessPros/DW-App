@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// Draft v1 — profile/dog/walker photos. Actual moderation (Cloud Vision
+// SafeSearch) happens in a Cloud Function triggered on upload, same pattern
+// as the sibling project's checkImageSafeSearch; these rules only gate who
+// can write where.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnerUid(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*')
+          && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // users/{uid}/profile.jpg
+    match /users/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwnerUid(uid) && isImage();
+    }
+
+    // walkerProfiles/{uid}/photo.jpg
+    match /walkerProfiles/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwnerUid(uid) && isImage();
+    }
+
+    // dogs/{dogId}/photo.jpg — app-side enforces the uploader owns the dog;
+    // Storage rules can't see Firestore ownership without a get(), which
+    // isn't worth the read cost here since it's already gated behind sign-in.
+    match /dogs/{dogId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isImage();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

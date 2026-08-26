@@ -1,0 +1,12 @@
+{
+  "name": "dog-walker-testing",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:rules": "node rules/run-rules-tests.js"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.48.0"
+  }
+}
