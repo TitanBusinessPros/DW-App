@@ -3,44 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dog Walker — Find trusted dog walkers nearby</title>
+<title>Dog Walker — Trusted Dog Walkers Across Oklahoma</title>
+<meta name="description" content="Browse trusted, local dog walkers in your Oklahoma town, message them directly, and book a walk your pup will love.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
+<div class="dev-banner">🚧 In development — not yet live. You're looking at an early preview.</div>
+
 <header class="site-header">
   <div class="container header-inner">
-    <a href="#" class="logo">🐾 Dog Walker</a>
+    <a href="#" class="logo">
+      <span class="logo-badge">🐾</span>
+      <span class="logo-text">Dog Walker</span>
+    </a>
     <nav class="main-nav">
-      <a href="#how-it-works">How it works</a>
-      <a href="#features">Features</a>
-      <a href="#become-a-walker">Become a walker</a>
+      <a href="#services">Services</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#why-us">Why Us</a>
+      <a href="#become-a-walker">Become a Walker</a>
     </nav>
     <div class="header-actions">
-      <a href="#" class="btn btn-ghost">Log in</a>
-      <a href="#" class="btn btn-primary">Sign up</a>
+      <a href="#" class="btn btn-ghost" onclick="comingSoon(event)">Log in</a>
+      <a href="#" class="btn btn-primary" onclick="comingSoon(event)">Sign up</a>
     </div>
   </div>
 </header>
 
 <main>
+  <!-- Hero -->
   <section class="hero">
     <div class="container hero-inner">
       <div class="hero-copy">
-        <h1>Trusted dog walkers, right in your neighborhood.</h1>
-        <p>Book walks, drop-in visits, and pet sitting from vetted local walkers. Message them directly, track the walk, and relax.</p>
-        <form class="search-bar" role="search">
-          <input type="text" placeholder="Enter your address or zip code" aria-label="Location">
-          <button type="submit" class="btn btn-primary">Find a walker</button>
+        <h1>Your Dog's New <span class="accent">Adventure</span> Awaits!</h1>
+        <p>Browse trusted, local dog walkers in your Oklahoma town, message them directly, and book a walk your pup will love. Every walker sets their own schedule and rates — you pick who's right for your best friend.</p>
+
+        <form class="search-bar" onsubmit="comingSoon(event)">
+          <input type="text" placeholder="Enter your Oklahoma town" aria-label="Town">
+          <button type="submit" class="btn btn-primary">
+            <span class="icon">🔎</span> Find Walkers
+          </button>
         </form>
-        <p class="hero-subtext">Or <a href="#become-a-walker">become a walker</a> and earn on your schedule.</p>
+        <p class="hero-subtext">Or <a href="#become-a-walker">become a walker</a> and earn on your own schedule.</p>
+
+        <div class="trust-badges">
+          <span class="trust-badge">🛡️ Verified profiles</span>
+          <span class="trust-badge">📍 Oklahoma only</span>
+          <span class="trust-badge">💬 Message before you book</span>
+        </div>
       </div>
+
       <div class="hero-art" aria-hidden="true">
         <div class="hero-card">
           <div class="hero-card-avatar">🐕</div>
           <div class="hero-card-body">
             <strong>Buddy's Walk</strong>
-            <span>Today · 3:00 PM · 30 min</span>
+            <span>Today · 3:00 PM · 30 min · Pauls Valley</span>
           </div>
           <span class="status-pill">In progress</span>
         </div>
@@ -48,78 +69,151 @@
     </div>
   </section>
 
-  <section id="features" class="features">
+  <!-- Services / categories -->
+  <section id="services" class="services">
     <div class="container">
-      <h2>Everything you need, in one app</h2>
-      <div class="feature-grid">
-        <div class="feature-card">
-          <div class="feature-icon">👤</div>
-          <h3>Verified profiles</h3>
-          <p>Every walker is background-checked with reviews from real pet owners.</p>
+      <div class="section-head">
+        <h2>What You Can Book</h2>
+        <p>Every walker lists their own rates and availability — browse, compare, and message before you book.</p>
+      </div>
+
+      <div class="card-grid">
+        <div class="service-card service-card--sunny">
+          <div class="service-icon">🚶</div>
+          <h3>Dog Walking</h3>
+          <p>A neighborhood walk with a walker your dog knows and trusts, with photo updates along the way.</p>
+          <span class="rate-note">Rates set by each walker</span>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">💬</div>
-          <h3>Direct messaging</h3>
-          <p>Coordinate details, share updates, and get photos during every walk.</p>
+
+        <div class="service-card service-card--sky">
+          <div class="service-icon">🎾</div>
+          <h3>Park Playdates</h3>
+          <p>Supervised, social play at the local dog park — great for high-energy pups who love making friends.</p>
+          <span class="rate-note">Rates set by each walker</span>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">📅</div>
-          <h3>Easy booking</h3>
-          <p>Schedule one-time or recurring walks in a couple of taps.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">⭐</div>
-          <h3>Ratings & reviews</h3>
-          <p>Book with confidence using ratings from the community.</p>
+
+        <div class="service-card service-card--sage">
+          <div class="service-icon">🏠</div>
+          <h3>Pet Sitting</h3>
+          <p>In-home visits for feeding, playtime, and company while you're away — no boarding required.</p>
+          <span class="rate-note">Rates set by each walker</span>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- How it works -->
   <section id="how-it-works" class="how-it-works">
     <div class="container">
-      <h2>How it works</h2>
+      <div class="section-head">
+        <h2>It's <span class="accent">Super Easy</span> to Get Started</h2>
+        <p>Three steps and your pup's on their way to their best day ever.</p>
+      </div>
+
       <ol class="steps">
         <li>
+          <span class="step-icon step-icon--sunny">📝</span>
           <span class="step-num">1</span>
           <h3>Tell us about your dog</h3>
-          <p>Create a profile with your pet's needs, routine, and preferences.</p>
+          <p>Create a profile with your town, your dog's needs, and their routine.</p>
         </li>
         <li>
+          <span class="step-icon step-icon--sky">🔍</span>
           <span class="step-num">2</span>
-          <h3>Browse & book a walker</h3>
-          <p>Compare nearby walkers, read reviews, and book a time that works.</p>
+          <h3>Browse & message local walkers</h3>
+          <p>Compare verified walkers near you, read reviews, and ask questions before you commit.</p>
         </li>
         <li>
+          <span class="step-icon step-icon--sage">🎉</span>
           <span class="step-num">3</span>
-          <h3>Relax during the walk</h3>
-          <p>Message your walker and get updates while you're away.</p>
+          <h3>Book & relax</h3>
+          <p>Confirm a time, then get photo updates while your dog has the time of their life.</p>
         </li>
       </ol>
     </div>
   </section>
 
+  <!-- Why us -->
+  <section id="why-us" class="why-us">
+    <div class="container">
+      <div class="section-head">
+        <h2>Why Oklahoma Pet Owners Will <span class="accent">Love</span> It</h2>
+        <p>Built for real neighborhoods, not a nationwide free-for-all.</p>
+      </div>
+
+      <div class="card-grid card-grid--3col">
+        <div class="benefit-card">
+          <div class="benefit-icon benefit-icon--sunny">👤</div>
+          <h3>Verified Profiles</h3>
+          <p>Every walker goes through an approval process before they're listed — no anonymous strangers.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon benefit-icon--sky">💬</div>
+          <h3>Message First</h3>
+          <p>Talk directly with a walker before you ever book, so you know exactly who's showing up.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon benefit-icon--sage">📍</div>
+          <h3>Oklahoma, Town by Town</h3>
+          <p>We only operate in Oklahoma, and we cap how many walkers list in each town — no oversaturated markets.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon benefit-icon--brown">⭐</div>
+          <h3>Ratings & Reviews</h3>
+          <p>Book with confidence using honest reviews from other local pet owners.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon benefit-icon--sunny">📸</div>
+          <h3>Photo Updates</h3>
+          <p>See your dog's happy face during the walk, not just a text saying it happened.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon benefit-icon--sky">📅</div>
+          <h3>Flexible Scheduling</h3>
+          <p>Every walker sets their own hours and availability — find one that fits your routine.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Become a walker CTA -->
   <section id="become-a-walker" class="cta-band">
     <div class="container cta-inner">
       <div>
         <h2>Love dogs? Start earning as a walker.</h2>
-        <p>Set your own hours, choose your neighborhood, and get paid weekly.</p>
+        <p>Set your own hours, pick your town, and get paid for every walk — no monthly fee to list.</p>
       </div>
-      <a href="#" class="btn btn-primary btn-lg">Apply to walk</a>
+      <a href="#" class="btn btn-primary btn-lg" onclick="comingSoon(event)">Apply to Walk</a>
     </div>
   </section>
 </main>
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <span>© 2026 Dog Walker</span>
+    <div class="footer-brand">
+      <span class="logo-badge">🐾</span>
+      <div>
+        <strong>Dog Walker</strong>
+        <p>A Titan Business Pros LLC project — currently in development.</p>
+      </div>
+    </div>
     <nav>
       <a href="#">Privacy</a>
       <a href="#">Terms</a>
       <a href="#">Contact</a>
     </nav>
   </div>
+  <div class="container footer-bottom">
+    <p>© 2026 Dog Walker. Serving towns across Oklahoma. 🐕</p>
+  </div>
 </footer>
+
+<script>
+  function comingSoon(e) {
+    e.preventDefault();
+    alert("🐾 Not live yet — this is an early design preview. Sign-ups are coming soon!");
+  }
+</script>
 
 </body>
 </html>
