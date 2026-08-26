@@ -5,6 +5,6 @@ const { test, expect } = require("@playwright/test");
 
 test("home page loads and shows the hero", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("h1")).toContainText("Trusted dog walkers");
+  await expect(page.locator("h1")).toContainText("Adventure Awaits");
   await expect(page.locator(".search-bar input")).toBeVisible();
 });
