@@ -17,8 +17,8 @@ module.exports = async function globalSetup() {
   await db.collection("towns").doc("pauls-valley").set({
     name: "Pauls Valley",
     county: "Garvin",
-    population: 5000,
-    walkerCap: 50,
+    population: 6112,
+    walkerCap: 61,
     approvedWalkerCount: 0,
     status: "open",
   });

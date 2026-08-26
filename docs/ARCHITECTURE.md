@@ -16,28 +16,43 @@ on top of them.
 
 ## Service area: Oklahoma-only, town by town
 
-The whole state-restriction and per-town-cap problem is solved with **one mechanism**: a
-curated `towns` collection. There is no geocoding/geofencing in v1 — a walker or an owner
-can only pick a town from this list, and every town in the list is one we've explicitly
-added because it's in Oklahoma. That makes "Oklahoma only" true by construction, not by
-checking coordinates.
+**Revised 2026-08-26** — split into a static list (no database involved) plus a small
+live counter collection, instead of pre-seeding one Firestore document per town.
 
-```
-towns/{townId}
-  name: "Pauls Valley"
-  county: "Garvin"
-  population: 5000              // for computing a default cap, not shown to users
-  walkerCap: 50                 // hard ceiling on APPROVED walkers in this town
-  approvedWalkerCount: 0        // maintained by a Cloud Function trigger, never client-written
-  status: "open" | "cap_reached"
-  createdAt, capLastRaisedAt
-```
-
+- **`public/data/ok-towns.json`** — the actual Oklahoma-only allowlist. All 594
+  incorporated Oklahoma cities/towns with population > 0 (sourced from Wikipedia's
+  Census-backed municipality table), `{ id, name, county, population }`. Ships as a
+  static asset with every `firebase deploy --only hosting` — no seeding, no admin
+  credentials, no database round trip to populate the signup dropdown. This is what
+  makes "Oklahoma only" true by construction: a walker or owner can only pick a town
+  from this file.
+- **`towns/{townId}`** — a *live counter*, not a reference list. It only exists for a
+  town once someone has actually signed up from it. `public/signup.html` self-registers
+  it on demand (see below), seeded from the matching entry in `ok-towns.json`:
+  ```
+  towns/{townId}
+    name: "Pauls Valley"
+    county: "Garvin"
+    population: 6112
+    walkerCap: 61                 // hard ceiling on APPROVED walkers in this town
+    approvedWalkerCount: 0        // maintained by a Cloud Function trigger, never client-written
+    status: "open" | "cap_reached"
+  ```
 - **Default cap formula:** `max(10, round(population * 0.01))` — 1% of town population,
-  minimum 10 so a tiny town can still support a couple of walkers. Pauls Valley
-  (~5,000) → 50, matching your example. Admin can override per town at add-time.
-- Every `users/{uid}` (owner) and `walkerProfiles/{uid}` (walker) gets a required
-  `townId` field, validated by `firestore.rules` against `exists(towns/{townId})`.
+  minimum 10 so a tiny town can still support a couple of walkers. Computed client-side
+  at registration time (and re-derivable any time from `ok-towns.json`), not hand-set
+  per town.
+- **Self-registration, not admin seeding:** `firestore.rules` lets any signed-in user
+  *create* a `towns/{townId}` doc, but only with a fresh, correctly-shaped counter
+  (`approvedWalkerCount == 0`, `status == "open"`, right field types) — never edit an
+  existing one. Once a town's counter doc exists, only an admin/Cloud Function can
+  change it, so `approvedWalkerCount` can't be tampered with client-side even though
+  creation is open. This replaces the earlier plan of bulk-seeding ~590 docs via a
+  service-account script, which was unnecessary maintenance/deployment friction for
+  data that's 99% static — see decision log.
+- Every `users/{uid}` (owner) and `walkerProfiles/{uid}` (walker) still gets a required
+  `townId` field, validated by `firestore.rules` against `exists(towns/{townId})` — true
+  by the time of that write because the client creates/confirms the town doc first.
   Bookings inherit `townId` from the walker being booked — an owner literally cannot
   construct a booking that references a walker/town outside the allowlist.
 - **Cap enforcement point:** at admin approval, not at signup. A pending applicant can
@@ -121,6 +136,9 @@ Stripe dashboard.
 4. ~~Auto-merge~~ — **Resolved 2026-08-26:** CI green → merge automatically, no
    per-PR confirmation.
 5. **Open:** manual vs. automatic town-cap escalation (see Service Area section).
+6. ~~Town data seeding~~ — **Resolved 2026-08-26:** dropped the service-account-key
+   bulk-seeder in favor of a static `ok-towns.json` + on-demand `towns/{townId}`
+   self-registration. No more manual database seeding, ever, for towns.
 
 ## What was deliberately left out of this port
 

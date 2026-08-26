@@ -40,13 +40,27 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
-    // towns/{townId} — the Oklahoma-only allowlist + per-town walker cap.
-    // Public read (needed on the signup page before anyone has an account
-    // at all); only an admin can add/edit towns or move the cap.
+    // towns/{townId} — live per-town walker-cap counter. The full Oklahoma
+    // town/county/population list itself lives as a static asset shipped
+    // with hosting (public/data/ok-towns.json) — nothing to seed here.
+    // A doc in this collection only exists once someone has actually
+    // signed up from that town: the signup flow self-registers it the
+    // first time, seeded from that same static list (see public/signup.html).
+    // Once a doc exists, only an admin/Cloud Function can change it — a
+    // regular user can create the doc but never edit an existing one, so
+    // approvedWalkerCount can't be tampered with client-side.
     // ---------------------------------------------------------------------
     match /towns/{townId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.keys().hasOnly(['name', 'county', 'population', 'walkerCap', 'approvedWalkerCount', 'status'])
+                    && request.resource.data.name is string && request.resource.data.name.size() > 0
+                    && request.resource.data.county is string
+                    && request.resource.data.population is int && request.resource.data.population > 0
+                    && request.resource.data.walkerCap is int && request.resource.data.walkerCap > 0
+                    && request.resource.data.approvedWalkerCount == 0
+                    && request.resource.data.status == 'open';
+      allow update, delete: if isAdmin();
     }
 
     // ---------------------------------------------------------------------
