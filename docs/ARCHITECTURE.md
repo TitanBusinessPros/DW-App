@@ -123,7 +123,46 @@ Stripe dashboard.
 | `reviews/{reviewId}` | Post-booking rating/review, tied to a completed `bookingId`. |
 | `blocks/{pairId}`, `reports/{reportId}`, `bugReports/{reportId}` | Safety. |
 | `messageLimits/{uid}`, `bookingLimits/{uid}` | Rate limiting. |
-| `admins/{uid}` | Admin allowlist. |
+| `admins/{email}` | Admin allowlist, keyed by email (see Admin portal below). |
+| `adminPinAttempts/{uid}` | PIN lockout counter, Cloud-Function-only. |
+
+## Admin portal & approval flow
+
+**Added 2026-08-26.** `public/admin.html` — the only way any `users/{uid}` doc
+moves out of `approved: false`. Two layers, both required:
+
+1. **Email allowlist** — `admins/{email}` docs, added by hand in the Firebase
+   console (Firestore write is `if false` for everyone, including admins
+   themselves — console/Admin SDK only). This is the real authorization
+   boundary and is what `isAdmin()` in `firestore.rules` checks — keyed by
+   email (not uid) so an address can be pre-authorized before it's ever
+   signed in. (Which emails are on it isn't recorded here — this repo is
+   public — see the Firestore console for the live list.)
+2. **PIN second factor** — after Google sign-in, an allowlisted email still
+   has to enter a PIN, verified server-side by the callable Cloud Function
+   `verifyAdminPin` (never compared client-side, so it's never sitting in
+   page source). 5 wrong attempts locks that uid out for 15 minutes
+   (`adminPinAttempts/{uid}`, Cloud-Function-only). Passing it just sets a
+   `sessionStorage` flag for that tab — the actual data access is still
+   governed by `isAdmin()` regardless of the PIN, which is a UX gate on top,
+   not a second security boundary.
+3. Once in, an admin sees every `users/{uid}` with `approved == false` and can
+   Approve (`approved: true, everApproved: true`) or Reject (`rejected: true`)
+   with one click — plain client-side Firestore writes, allowed by the
+   `isAdmin()` branch of `firestore.rules`.
+
+**Setting the real PIN:** `firebase functions:secrets:set ADMIN_PIN --project
+dw-app-2beee` — run that yourself (never paste the value in chat); it prompts
+for the value interactively. Local/CI testing uses a fixed, non-secret
+placeholder (`functions/.secret.local`, gitignored) — never the real one.
+
+**Bug fixed in this same pass:** the pre-existing self-service update branches
+on `users/{uid}` and `walkerProfiles/{uid}` let an owner set
+`approved`/`everApproved`/`rejected` to *any* internally-consistent
+combination themselves — i.e. any user could already self-approve. Neither
+field is in the self-service `hasOnly()` list anymore; only the `isAdmin()`
+branch can move them now. Caught by a rules test while building this feature,
+not a live incident.
 
 ## Decision log
 

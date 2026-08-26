@@ -42,9 +42,17 @@
       return;
     }
 
+    // Not a security check (firestore.rules is) — just decides whether to
+    // show the admin-portal link. Reading your own admins/{email} doc is
+    // allowed by rules for exactly this purpose.
+    const adminSnap = user.email ? await getDoc(doc(db, "admins", user.email)) : null;
+    const adminLink = adminSnap && adminSnap.exists()
+      ? `<p style="text-align:center; margin-top: 8px;"><a href="admin.html">Admin portal →</a></p>`
+      : "";
+
     const snap = await getDoc(doc(db, "users", user.uid));
     if (!snap.exists()) {
-      card.innerHTML = `<h1>Welcome!</h1><p>We couldn't find a profile for your account yet. Try signing up again.</p>`;
+      card.innerHTML = `<h1>Welcome!</h1><p>We couldn't find a profile for your account yet. Try signing up again.</p>${adminLink}`;
       return;
     }
 
@@ -64,6 +72,7 @@
           ? "Your profile is approved! Browsing walkers and booking isn't built yet, but it's next."
           : "Your profile is waiting on admin review. We'll notify you once it's approved — this app doesn't auto-approve yet."}
       </p>
+      ${adminLink}
     `;
   });
 

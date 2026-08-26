@@ -16,6 +16,7 @@ ui-debug.log
 .env.local
 .env.*.local
 serviceAccountKey.json
+functions/.secret.local
 
 # Playwright
 testing/test-results/

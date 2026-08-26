@@ -22,6 +22,7 @@ async function main() {
   // Seed a town, bypassing rules — this represents a town that already
   // has a walker-cap counter doc (i.e. someone already signed up from it),
   // as opposed to the "brand new town" self-registration tested below.
+  // Also seed an admin allowlist entry, keyed by email (see firestore.rules).
   await testEnv.withSecurityRulesDisabled(async (context) => {
     await context
       .firestore()
@@ -35,7 +36,12 @@ async function main() {
         approvedWalkerCount: 0,
         status: "open",
       });
+    await context.firestore().collection("admins").doc("admin@example.com").set({});
   });
+
+  const adminDb = testEnv
+    .authenticatedContext("admin-uid", { email: "admin@example.com", email_verified: true })
+    .firestore();
 
   try {
     // An unapproved, unauthenticated client can't read anyone's profile.
@@ -151,6 +157,46 @@ async function main() {
           role: "admin", // not a real role
           townId: "pauls-valley",
         })
+      );
+    }
+
+    // Admin allowlist is keyed by email, not uid — a signed-in user can
+    // read their OWN admin doc (used to decide whether to show the admin
+    // portal link) but not anyone else's, and can never write to it at all.
+    {
+      const db = testEnv
+        .authenticatedContext("admin-uid", { email: "admin@example.com", email_verified: true })
+        .firestore();
+      await assertSucceeds(db.collection("admins").doc("admin@example.com").get());
+      await assertFails(db.collection("admins").doc("someone-else@example.com").get());
+      await assertFails(db.collection("admins").doc("admin@example.com").set({ extra: true }));
+    }
+
+    // A real admin (email on the allowlist) CAN update an existing town —
+    // e.g. raising a cap — where a random signed-in user can't (tested above).
+    {
+      await assertSucceeds(
+        adminDb.collection("towns").doc("pauls-valley").update({ walkerCap: 100 })
+      );
+    }
+
+    // ...and can approve a pending user, which a regular signed-in user
+    // (even the user themselves) can't do directly.
+    {
+      const db = testEnv.authenticatedContext("erin").firestore();
+      await assertSucceeds(
+        db.collection("users").doc("erin").set({
+          approved: false,
+          everApproved: false,
+          role: "owner",
+          townId: "pauls-valley",
+        })
+      );
+      await assertFails(
+        db.collection("users").doc("erin").update({ approved: true, everApproved: true })
+      );
+      await assertSucceeds(
+        adminDb.collection("users").doc("erin").update({ approved: true, everApproved: true })
       );
     }
 

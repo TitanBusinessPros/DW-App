@@ -49,6 +49,11 @@ import {
   getMessaging,
   isSupported as isMessagingSupported,
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js";
+import {
+  getFunctions,
+  connectFunctionsEmulator,
+  httpsCallable,
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-functions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCAXlbDG9HupA9njhcH0-_yWNtFFgugQO4",
@@ -71,6 +76,7 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const functions = getFunctions(app);
 
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
@@ -78,6 +84,7 @@ if (isLocal) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   connectStorageEmulator(storage, "127.0.0.1", 9199);
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
 }
 
 // Messaging needs a real HTTPS origin (or localhost) and browser support —
@@ -114,4 +121,5 @@ export {
   ref,
   uploadBytes,
   getDownloadURL,
+  httpsCallable,
 };

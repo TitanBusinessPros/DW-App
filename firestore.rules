@@ -15,8 +15,13 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Admin status is keyed by (verified) email, not uid — so a specific
+    // Google account can be pre-authorized as an admin in the console
+    // before they've ever signed in even once (no uid to key on yet).
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return isSignedIn()
+          && request.auth.token.email_verified == true
+          && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
     }
 
     // A profile counts as "approved" once an admin has cleared it (or it
@@ -32,12 +37,22 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
-    // Admin allowlist — written only via Admin SDK / console, never by users.
+    // Admin allowlist, keyed by email — written only via the Firebase
+    // console, never by users or client code. The doc's existence is the
+    // whole grant; contents don't matter (an empty {} doc is fine).
     // ---------------------------------------------------------------------
-    match /admins/{uid} {
-      allow read: if isSignedIn() && request.auth.uid == uid;
+    match /admins/{email} {
+      allow read: if isSignedIn() && request.auth.token.email == email;
       allow write: if false;
     }
+
+    // ---------------------------------------------------------------------
+    // adminPinAttempts/{uid} — the second-factor PIN lockout counter for
+    // the admin portal (see functions/index.js verifyAdminPin). Written
+    // only by that Cloud Function via the Admin SDK, which bypasses rules
+    // entirely — never read or written by any client, so no rule needed
+    // beyond the default deny-all catch-all below.
+    // ---------------------------------------------------------------------
 
     // ---------------------------------------------------------------------
     // towns/{townId} — live per-town walker-cap counter. The full Oklahoma
@@ -80,14 +95,15 @@ service cloud.firestore {
       allow update: if isAdmin()
                     // Profile edits (name/photo/bio/role/location) — self-service,
                     // blocked once a SafeSearch flag is sitting on the current doc.
+                    // approved/everApproved/rejected are deliberately NOT in this
+                    // list — those only ever change via the isAdmin() branch above
+                    // (the admin portal). A value that's genuinely unchanged never
+                    // shows up in diff().affectedKeys(), so this only blocks actual
+                    // attempts to move them.
                     || (isOwnerUid(uid)
-                        && (request.resource.data.approved == false
-                            || (request.resource.data.approved == true
-                                && request.resource.data.everApproved == true
-                                && request.resource.data.get('rejected', false) == false
-                                && resource.data.get('safeSearchFlag', {}).get('flagged', false) == false))
+                        && resource.data.get('safeSearchFlag', {}).get('flagged', false) == false
                         && request.resource.data.diff(resource.data).affectedKeys()
-                             .hasOnly(['profile', 'role', 'lastEditedAt', 'photo', 'approved', 'everApproved', 'rejected']))
+                             .hasOnly(['profile', 'role', 'lastEditedAt', 'photo']))
                     // Admin/consent fields — always writable regardless of approval.
                     || (isOwnerUid(uid)
                         && request.resource.data.diff(resource.data).affectedKeys()
@@ -114,16 +130,14 @@ service cloud.firestore {
                     && request.resource.data.everApproved == false
                     && request.resource.data.get('listingPaidUntil', null) == null;
 
+      // Same rule as users/{uid} above: approved/everApproved/rejected are
+      // admin-only (isAdmin() branch), never in the self-service hasOnly list.
       allow update: if isAdmin()
                     || (isOwnerUid(uid)
-                        && (request.resource.data.approved == false
-                            || (request.resource.data.approved == true
-                                && request.resource.data.everApproved == true
-                                && request.resource.data.get('rejected', false) == false
-                                && resource.data.get('safeSearchFlag', {}).get('flagged', false) == false))
+                        && resource.data.get('safeSearchFlag', {}).get('flagged', false) == false
                         && request.resource.data.get('listingPaidUntil', null) == resource.data.get('listingPaidUntil', null)
                         && request.resource.data.diff(resource.data).affectedKeys()
-                             .hasOnly(['bio', 'serviceRadius', 'hourlyRate', 'availability', 'lastEditedAt', 'photo', 'approved', 'everApproved', 'rejected']));
+                             .hasOnly(['bio', 'serviceRadius', 'hourlyRate', 'availability', 'lastEditedAt', 'photo']));
 
       allow delete: if isOwnerUid(uid) || isAdmin();
     }
