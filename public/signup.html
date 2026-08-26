@@ -92,7 +92,7 @@
   import {
     auth, db,
     onAuthStateChanged, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider,
-    doc, setDoc, getDoc, collection, getDocs, query, orderBy, serverTimestamp,
+    doc, setDoc, getDoc, serverTimestamp,
   } from "./firebase-init.js";
 
   const params = new URLSearchParams(location.search);
@@ -111,29 +111,33 @@
     errorBox.classList.remove("visible");
   }
 
-  // Populate the town dropdown from Firestore. This is the actual
-  // Oklahoma-only enforcement mechanism — see docs/ARCHITECTURE.md.
+  // Populate the town dropdown from the static Oklahoma town list that
+  // ships with hosting (public/data/ok-towns.json) — no Firestore round
+  // trip, no seeding, works even for a town nobody has ever signed up
+  // from yet. This is the actual Oklahoma-only enforcement mechanism —
+  // see docs/ARCHITECTURE.md. `towns` (keyed by id) is filled in once the
+  // fetch resolves and used again below to self-register the Firestore
+  // counter doc for whichever town gets picked.
   const townSelect = document.getElementById("townId");
+  const towns = new Map();
   async function loadTowns() {
     try {
-      const snap = await getDocs(query(collection(db, "towns"), orderBy("name")));
+      const res = await fetch("data/ok-towns.json");
+      const list = await res.json();
       townSelect.innerHTML = "";
-      if (snap.empty) {
-        townSelect.innerHTML = `<option value="" disabled selected>No towns available yet</option>`;
-        return;
-      }
       const placeholder = document.createElement("option");
       placeholder.value = "";
       placeholder.disabled = true;
       placeholder.selected = true;
       placeholder.textContent = "Select your town";
       townSelect.appendChild(placeholder);
-      snap.forEach((d) => {
+      for (const town of list) {
+        towns.set(town.id, town);
         const opt = document.createElement("option");
-        opt.value = d.id;
-        opt.textContent = d.data().name;
+        opt.value = town.id;
+        opt.textContent = town.name;
         townSelect.appendChild(opt);
-      });
+      }
     } catch (err) {
       townSelect.innerHTML = `<option value="" disabled selected>Couldn't load towns</option>`;
       console.error(err);
@@ -141,11 +145,37 @@
   }
   loadTowns();
 
+  // Matches the cap formula in docs/ARCHITECTURE.md.
+  function walkerCapFor(population) {
+    return Math.max(10, Math.round(population * 0.01));
+  }
+
+  // Firestore's towns/{townId} doc is just a live walker-cap counter —
+  // it only needs to exist once someone actually signs up from that town.
+  // Create it here, seeded from the static list, the first time it's used.
+  // Rules only allow *creating* a fresh doc, never overwriting an existing
+  // one, so this is safe to call on every signup without clobbering counts.
+  async function ensureTownDoc(townId) {
+    const ref = doc(db, "towns", townId);
+    const existing = await getDoc(ref);
+    if (existing.exists()) return;
+    const town = towns.get(townId);
+    await setDoc(ref, {
+      name: town.name,
+      county: town.county,
+      population: town.population,
+      walkerCap: walkerCapFor(town.population),
+      approvedWalkerCount: 0,
+      status: "open",
+    });
+  }
+
   async function createProfileDoc(uid) {
     const existing = await getDoc(doc(db, "users", uid));
     if (existing.exists()) return; // already has a profile — don't clobber it
     const role = document.querySelector('input[name="role"]:checked').value;
     const townId = townSelect.value;
+    await ensureTownDoc(townId);
     await setDoc(doc(db, "users", uid), {
       displayName: document.getElementById("displayName").value.trim(),
       role,

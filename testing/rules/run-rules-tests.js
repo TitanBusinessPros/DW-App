@@ -19,15 +19,22 @@ async function main() {
     },
   });
 
-  // Seed a town, bypassing rules — this is data setup, not something
-  // exercised by rules themselves (that's covered by the towns/{townId}
-  // read/write tests below).
+  // Seed a town, bypassing rules — this represents a town that already
+  // has a walker-cap counter doc (i.e. someone already signed up from it),
+  // as opposed to the "brand new town" self-registration tested below.
   await testEnv.withSecurityRulesDisabled(async (context) => {
     await context
       .firestore()
       .collection("towns")
       .doc("pauls-valley")
-      .set({ name: "Pauls Valley", walkerCap: 50, approvedWalkerCount: 0 });
+      .set({
+        name: "Pauls Valley",
+        county: "Garvin",
+        population: 6112,
+        walkerCap: 61,
+        approvedWalkerCount: 0,
+        status: "open",
+      });
   });
 
   try {
@@ -44,11 +51,52 @@ async function main() {
       await assertSucceeds(db.collection("towns").doc("pauls-valley").get());
     }
 
-    // A random signed-in user can't write to towns — admin-only.
+    // Any signed-in user can self-register a BRAND NEW town doc with a
+    // well-formed, fresh counter — this is how the signup page bootstraps
+    // a town the first time someone from it signs up (see public/signup.html).
+    {
+      const db = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(
+        db.collection("towns").doc("new-town").set({
+          name: "New Town",
+          county: "Some County",
+          population: 1000,
+          walkerCap: 10,
+          approvedWalkerCount: 0,
+          status: "open",
+        })
+      );
+    }
+
+    // ...but they can't create it with a nonzero counter, a wrong-shaped
+    // field, or an extra field — only a fresh, correct counter is allowed.
     {
       const db = testEnv.authenticatedContext("alice").firestore();
       await assertFails(
-        db.collection("towns").doc("new-town").set({ name: "New Town", walkerCap: 10 })
+        db.collection("towns").doc("cheater-town").set({
+          name: "Cheater Town",
+          county: "Some County",
+          population: 1000,
+          walkerCap: 10,
+          approvedWalkerCount: 5, // not allowed — must start at 0
+          status: "open",
+        })
+      );
+    }
+
+    // ...and they can't overwrite/edit a town that already exists —
+    // admin/Cloud-Functions-only from that point on.
+    {
+      const db = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(
+        db.collection("towns").doc("pauls-valley").set({
+          name: "Pauls Valley",
+          county: "Garvin",
+          population: 6112,
+          walkerCap: 9999, // trying to inflate the cap
+          approvedWalkerCount: 0,
+          status: "open",
+        })
       );
     }
 

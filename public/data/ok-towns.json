@@ -1,0 +1,3566 @@
+[
+  {
+    "id": "achille",
+    "name": "Achille",
+    "county": "Bryan",
+    "population": 429
+  },
+  {
+    "id": "ada",
+    "name": "Ada",
+    "county": "Pontotoc",
+    "population": 16578
+  },
+  {
+    "id": "adair",
+    "name": "Adair",
+    "county": "Mayes",
+    "population": 743
+  },
+  {
+    "id": "addington",
+    "name": "Addington",
+    "county": "Jefferson",
+    "population": 92
+  },
+  {
+    "id": "afton",
+    "name": "Afton",
+    "county": "Ottawa",
+    "population": 752
+  },
+  {
+    "id": "agra",
+    "name": "Agra",
+    "county": "Lincoln",
+    "population": 326
+  },
+  {
+    "id": "albion",
+    "name": "Albion",
+    "county": "Pushmataha",
+    "population": 61
+  },
+  {
+    "id": "alderson",
+    "name": "Alderson",
+    "county": "Pittsburg",
+    "population": 217
+  },
+  {
+    "id": "alex",
+    "name": "Alex",
+    "county": "Grady",
+    "population": 508
+  },
+  {
+    "id": "aline",
+    "name": "Aline",
+    "county": "Alfalfa",
+    "population": 171
+  },
+  {
+    "id": "allen",
+    "name": "Allen",
+    "county": "Pontotoc",
+    "population": 803
+  },
+  {
+    "id": "altus",
+    "name": "Altus",
+    "county": "Jackson",
+    "population": 18543
+  },
+  {
+    "id": "alva",
+    "name": "Alva",
+    "county": "Woods",
+    "population": 4962
+  },
+  {
+    "id": "amber",
+    "name": "Amber",
+    "county": "Grady",
+    "population": 455
+  },
+  {
+    "id": "ames",
+    "name": "Ames",
+    "county": "Major",
+    "population": 189
+  },
+  {
+    "id": "amorita",
+    "name": "Amorita",
+    "county": "Alfalfa",
+    "population": 40
+  },
+  {
+    "id": "anadarko",
+    "name": "Anadarko",
+    "county": "Caddo",
+    "population": 5530
+  },
+  {
+    "id": "antlers",
+    "name": "Antlers",
+    "county": "Pushmataha",
+    "population": 2185
+  },
+  {
+    "id": "apache",
+    "name": "Apache",
+    "county": "Caddo",
+    "population": 1008
+  },
+  {
+    "id": "arapaho",
+    "name": "Arapaho",
+    "county": "Custer",
+    "population": 662
+  },
+  {
+    "id": "arcadia",
+    "name": "Arcadia",
+    "county": "Oklahoma",
+    "population": 176
+  },
+  {
+    "id": "ardmore",
+    "name": "Ardmore",
+    "county": "Carter",
+    "population": 25064
+  },
+  {
+    "id": "arkoma",
+    "name": "Arkoma",
+    "county": "LeFlore",
+    "population": 1858
+  },
+  {
+    "id": "armstrong",
+    "name": "Armstrong",
+    "county": "Bryan",
+    "population": 121
+  },
+  {
+    "id": "arnett",
+    "name": "Arnett",
+    "county": "Ellis",
+    "population": 486
+  },
+  {
+    "id": "asher",
+    "name": "Asher",
+    "county": "Pottawatomie",
+    "population": 376
+  },
+  {
+    "id": "ashland",
+    "name": "Ashland",
+    "county": "Pittsburg",
+    "population": 31
+  },
+  {
+    "id": "atoka",
+    "name": "Atoka",
+    "county": "Atoka",
+    "population": 2925
+  },
+  {
+    "id": "atwood",
+    "name": "Atwood",
+    "county": "Hughes",
+    "population": 84
+  },
+  {
+    "id": "avant",
+    "name": "Avant",
+    "county": "Osage",
+    "population": 302
+  },
+  {
+    "id": "barnsdall",
+    "name": "Barnsdall",
+    "county": "Osage",
+    "population": 975
+  },
+  {
+    "id": "bartlesville",
+    "name": "Bartlesville",
+    "county": "Washington",
+    "population": 38355
+  },
+  {
+    "id": "bearden",
+    "name": "Bearden",
+    "county": "Okfuskee",
+    "population": 136
+  },
+  {
+    "id": "beaver",
+    "name": "Beaver",
+    "county": "Beaver",
+    "population": 1252
+  },
+  {
+    "id": "beggs",
+    "name": "Beggs",
+    "county": "Okmulgee",
+    "population": 1184
+  },
+  {
+    "id": "bennington",
+    "name": "Bennington",
+    "county": "Bryan",
+    "population": 322
+  },
+  {
+    "id": "bernice",
+    "name": "Bernice",
+    "county": "Delaware",
+    "population": 433
+  },
+  {
+    "id": "bessie",
+    "name": "Bessie",
+    "county": "Washita",
+    "population": 183
+  },
+  {
+    "id": "bethany",
+    "name": "Bethany",
+    "county": "Oklahoma",
+    "population": 20421
+  },
+  {
+    "id": "bethel-acres",
+    "name": "Bethel Acres",
+    "county": "Pottawatomie",
+    "population": 3270
+  },
+  {
+    "id": "big-cabin",
+    "name": "Big Cabin",
+    "county": "Craig",
+    "population": 176
+  },
+  {
+    "id": "billings",
+    "name": "Billings",
+    "county": "Noble",
+    "population": 573
+  },
+  {
+    "id": "binger",
+    "name": "Binger",
+    "county": "Caddo",
+    "population": 441
+  },
+  {
+    "id": "bixby",
+    "name": "Bixby",
+    "county": "Tulsa",
+    "population": 31728
+  },
+  {
+    "id": "blackburn",
+    "name": "Blackburn",
+    "county": "Pawnee",
+    "population": 71
+  },
+  {
+    "id": "blackwell",
+    "name": "Blackwell",
+    "county": "Kay",
+    "population": 6016
+  },
+  {
+    "id": "blair",
+    "name": "Blair",
+    "county": "Jackson",
+    "population": 710
+  },
+  {
+    "id": "blanchard",
+    "name": "Blanchard",
+    "county": "McClain",
+    "population": 9869
+  },
+  {
+    "id": "bluejacket",
+    "name": "Bluejacket",
+    "county": "Craig",
+    "population": 243
+  },
+  {
+    "id": "boise-city",
+    "name": "Boise City",
+    "county": "Cimarron",
+    "population": 1077
+  },
+  {
+    "id": "bokchito",
+    "name": "Bokchito",
+    "county": "Bryan",
+    "population": 612
+  },
+  {
+    "id": "bokoshe",
+    "name": "Bokoshe",
+    "county": "LeFlore",
+    "population": 406
+  },
+  {
+    "id": "boley",
+    "name": "Boley",
+    "county": "Okfuskee",
+    "population": 1085
+  },
+  {
+    "id": "boswell",
+    "name": "Boswell",
+    "county": "Choctaw",
+    "population": 578
+  },
+  {
+    "id": "bowlegs",
+    "name": "Bowlegs",
+    "county": "Seminole",
+    "population": 349
+  },
+  {
+    "id": "boynton",
+    "name": "Boynton",
+    "county": "Muskogee",
+    "population": 165
+  },
+  {
+    "id": "bradley",
+    "name": "Bradley",
+    "county": "Grady",
+    "population": 83
+  },
+  {
+    "id": "braggs",
+    "name": "Braggs",
+    "county": "Muskogee",
+    "population": 271
+  },
+  {
+    "id": "braman",
+    "name": "Braman",
+    "county": "Kay",
+    "population": 164
+  },
+  {
+    "id": "bray",
+    "name": "Bray",
+    "county": "Stephens",
+    "population": 997
+  },
+  {
+    "id": "breckenridge",
+    "name": "Breckenridge",
+    "county": "Garfield",
+    "population": 200
+  },
+  {
+    "id": "bridge-creek",
+    "name": "Bridge Creek",
+    "county": "Grady",
+    "population": 347
+  },
+  {
+    "id": "bridgeport",
+    "name": "Bridgeport",
+    "county": "Caddo",
+    "population": 99
+  },
+  {
+    "id": "bristow",
+    "name": "Bristow",
+    "county": "Creek",
+    "population": 4282
+  },
+  {
+    "id": "broken-arrow",
+    "name": "Broken Arrow",
+    "county": "Tulsa",
+    "population": 122756
+  },
+  {
+    "id": "broken-bow",
+    "name": "Broken Bow",
+    "county": "McCurtain",
+    "population": 4227
+  },
+  {
+    "id": "bromide",
+    "name": "Bromide",
+    "county": "Johnston",
+    "population": 121
+  },
+  {
+    "id": "brooksville",
+    "name": "Brooksville",
+    "county": "Pottawatomie",
+    "population": 74
+  },
+  {
+    "id": "buffalo",
+    "name": "Buffalo",
+    "county": "Harper",
+    "population": 1019
+  },
+  {
+    "id": "burbank",
+    "name": "Burbank",
+    "county": "Osage",
+    "population": 125
+  },
+  {
+    "id": "burlington",
+    "name": "Burlington",
+    "county": "Alfalfa",
+    "population": 121
+  },
+  {
+    "id": "burns-flat",
+    "name": "Burns Flat",
+    "county": "Washita",
+    "population": 1916
+  },
+  {
+    "id": "butler",
+    "name": "Butler",
+    "county": "Custer",
+    "population": 207
+  },
+  {
+    "id": "byars",
+    "name": "Byars",
+    "county": "McClain",
+    "population": 204
+  },
+  {
+    "id": "byng",
+    "name": "Byng",
+    "county": "Pontotoc",
+    "population": 1403
+  },
+  {
+    "id": "byron",
+    "name": "Byron",
+    "county": "Alfalfa",
+    "population": 41
+  },
+  {
+    "id": "cache",
+    "name": "Cache",
+    "county": "Comanche",
+    "population": 3179
+  },
+  {
+    "id": "caddo",
+    "name": "Caddo",
+    "county": "Bryan",
+    "population": 1075
+  },
+  {
+    "id": "calera",
+    "name": "Calera",
+    "county": "Bryan",
+    "population": 3101
+  },
+  {
+    "id": "calumet",
+    "name": "Calumet",
+    "county": "Canadian",
+    "population": 506
+  },
+  {
+    "id": "calvin",
+    "name": "Calvin",
+    "county": "Hughes",
+    "population": 309
+  },
+  {
+    "id": "camargo",
+    "name": "Camargo",
+    "county": "Dewey",
+    "population": 183
+  },
+  {
+    "id": "cameron",
+    "name": "Cameron",
+    "county": "LeFlore",
+    "population": 331
+  },
+  {
+    "id": "canadian",
+    "name": "Canadian",
+    "county": "Pittsburg",
+    "population": 143
+  },
+  {
+    "id": "caney",
+    "name": "Caney",
+    "county": "Atoka",
+    "population": 192
+  },
+  {
+    "id": "canton",
+    "name": "Canton",
+    "county": "Blaine",
+    "population": 455
+  },
+  {
+    "id": "canute",
+    "name": "Canute",
+    "county": "Washita",
+    "population": 489
+  },
+  {
+    "id": "carlton-landing",
+    "name": "Carlton Landing",
+    "county": "Pittsburg",
+    "population": 126
+  },
+  {
+    "id": "carmen",
+    "name": "Carmen",
+    "county": "Alfalfa",
+    "population": 359
+  },
+  {
+    "id": "carnegie",
+    "name": "Carnegie",
+    "county": "Caddo",
+    "population": 1379
+  },
+  {
+    "id": "carney",
+    "name": "Carney",
+    "county": "Lincoln",
+    "population": 572
+  },
+  {
+    "id": "carrier",
+    "name": "Carrier",
+    "county": "Garfield",
+    "population": 87
+  },
+  {
+    "id": "carter",
+    "name": "Carter",
+    "county": "Beckham",
+    "population": 180
+  },
+  {
+    "id": "cashion",
+    "name": "Cashion",
+    "county": "Kingfisher",
+    "population": 948
+  },
+  {
+    "id": "castle",
+    "name": "Castle",
+    "county": "Okfuskee",
+    "population": 169
+  },
+  {
+    "id": "catoosa",
+    "name": "Catoosa",
+    "county": "Rogers",
+    "population": 7497
+  },
+  {
+    "id": "cedar-valley",
+    "name": "Cedar Valley",
+    "county": "Logan",
+    "population": 437
+  },
+  {
+    "id": "cement",
+    "name": "Cement",
+    "county": "Caddo",
+    "population": 422
+  },
+  {
+    "id": "centrahoma",
+    "name": "Centrahoma",
+    "county": "Coal",
+    "population": 86
+  },
+  {
+    "id": "central-high",
+    "name": "Central High",
+    "county": "Stephens",
+    "population": 1232
+  },
+  {
+    "id": "chandler",
+    "name": "Chandler",
+    "county": "Lincoln",
+    "population": 2944
+  },
+  {
+    "id": "chattanooga",
+    "name": "Chattanooga",
+    "county": "Comanche",
+    "population": 408
+  },
+  {
+    "id": "checotah",
+    "name": "Checotah",
+    "county": "McIntosh",
+    "population": 3086
+  },
+  {
+    "id": "chelsea",
+    "name": "Chelsea",
+    "county": "Rogers",
+    "population": 1986
+  },
+  {
+    "id": "cherokee",
+    "name": "Cherokee",
+    "county": "Alfalfa",
+    "population": 1453
+  },
+  {
+    "id": "cheyenne",
+    "name": "Cheyenne",
+    "county": "Roger Mills",
+    "population": 736
+  },
+  {
+    "id": "chickasha",
+    "name": "Chickasha",
+    "county": "Grady",
+    "population": 17014
+  },
+  {
+    "id": "choctaw",
+    "name": "Choctaw",
+    "county": "Oklahoma",
+    "population": 12358
+  },
+  {
+    "id": "chouteau",
+    "name": "Chouteau",
+    "county": "Mayes",
+    "population": 2154
+  },
+  {
+    "id": "cimarron-city",
+    "name": "Cimarron City",
+    "county": "Logan",
+    "population": 165
+  },
+  {
+    "id": "claremore",
+    "name": "Claremore",
+    "county": "Rogers",
+    "population": 20602
+  },
+  {
+    "id": "clayton",
+    "name": "Clayton",
+    "county": "Pushmataha",
+    "population": 555
+  },
+  {
+    "id": "clearview",
+    "name": "Clearview",
+    "county": "Okfuskee",
+    "population": 33
+  },
+  {
+    "id": "cleo-springs",
+    "name": "Cleo Springs",
+    "county": "Major",
+    "population": 277
+  },
+  {
+    "id": "cleveland",
+    "name": "Cleveland",
+    "county": "Pawnee",
+    "population": 3263
+  },
+  {
+    "id": "clinton",
+    "name": "Clinton",
+    "county": "Custer",
+    "population": 8355
+  },
+  {
+    "id": "coalgate",
+    "name": "Coalgate",
+    "county": "Coal",
+    "population": 1715
+  },
+  {
+    "id": "colbert",
+    "name": "Colbert",
+    "county": "Bryan",
+    "population": 1105
+  },
+  {
+    "id": "colcord",
+    "name": "Colcord",
+    "county": "Delaware",
+    "population": 753
+  },
+  {
+    "id": "cole",
+    "name": "Cole",
+    "county": "McClain",
+    "population": 652
+  },
+  {
+    "id": "collinsville",
+    "name": "Collinsville",
+    "county": "Tulsa",
+    "population": 9757
+  },
+  {
+    "id": "colony",
+    "name": "Colony",
+    "county": "Washita",
+    "population": 109
+  },
+  {
+    "id": "comanche",
+    "name": "Comanche",
+    "county": "Stephens",
+    "population": 1397
+  },
+  {
+    "id": "commerce",
+    "name": "Commerce",
+    "county": "Ottawa",
+    "population": 2268
+  },
+  {
+    "id": "cooperton",
+    "name": "Cooperton",
+    "county": "Kiowa",
+    "population": 4
+  },
+  {
+    "id": "copan",
+    "name": "Copan",
+    "county": "Washington",
+    "population": 729
+  },
+  {
+    "id": "corn",
+    "name": "Corn",
+    "county": "Washita",
+    "population": 589
+  },
+  {
+    "id": "cornish",
+    "name": "Cornish",
+    "county": "Jefferson",
+    "population": 113
+  },
+  {
+    "id": "council-hill",
+    "name": "Council Hill",
+    "county": "Muskogee",
+    "population": 111
+  },
+  {
+    "id": "covington",
+    "name": "Covington",
+    "county": "Garfield",
+    "population": 469
+  },
+  {
+    "id": "coweta",
+    "name": "Coweta",
+    "county": "Wagoner",
+    "population": 11093
+  },
+  {
+    "id": "cowlington",
+    "name": "Cowlington",
+    "county": "LeFlore",
+    "population": 140
+  },
+  {
+    "id": "coyle",
+    "name": "Coyle",
+    "county": "Logan",
+    "population": 338
+  },
+  {
+    "id": "crescent",
+    "name": "Crescent",
+    "county": "Logan",
+    "population": 1386
+  },
+  {
+    "id": "cromwell",
+    "name": "Cromwell",
+    "county": "Seminole",
+    "population": 236
+  },
+  {
+    "id": "crowder",
+    "name": "Crowder",
+    "county": "Pittsburg",
+    "population": 297
+  },
+  {
+    "id": "cushing",
+    "name": "Cushing",
+    "county": "Payne",
+    "population": 8444
+  },
+  {
+    "id": "custer-city",
+    "name": "Custer City",
+    "county": "Custer",
+    "population": 369
+  },
+  {
+    "id": "cyril",
+    "name": "Cyril",
+    "county": "Caddo",
+    "population": 804
+  },
+  {
+    "id": "dacoma",
+    "name": "Dacoma",
+    "county": "Woods",
+    "population": 110
+  },
+  {
+    "id": "davenport",
+    "name": "Davenport",
+    "county": "Lincoln",
+    "population": 852
+  },
+  {
+    "id": "davidson",
+    "name": "Davidson",
+    "county": "Tillman",
+    "population": 236
+  },
+  {
+    "id": "davis",
+    "name": "Davis",
+    "county": "Murray",
+    "population": 2831
+  },
+  {
+    "id": "deer-creek",
+    "name": "Deer Creek",
+    "county": "Grant",
+    "population": 75
+  },
+  {
+    "id": "del-city",
+    "name": "Del City",
+    "county": "Oklahoma",
+    "population": 21272
+  },
+  {
+    "id": "delaware",
+    "name": "Delaware",
+    "county": "Nowata",
+    "population": 274
+  },
+  {
+    "id": "depew",
+    "name": "Depew",
+    "county": "Creek",
+    "population": 415
+  },
+  {
+    "id": "devol",
+    "name": "Devol",
+    "county": "Cotton",
+    "population": 93
+  },
+  {
+    "id": "dewar",
+    "name": "Dewar",
+    "county": "Okmulgee",
+    "population": 760
+  },
+  {
+    "id": "dewey",
+    "name": "Dewey",
+    "county": "Washington",
+    "population": 3439
+  },
+  {
+    "id": "dibble",
+    "name": "Dibble",
+    "county": "McClain",
+    "population": 985
+  },
+  {
+    "id": "dickson",
+    "name": "Dickson",
+    "county": "Carter",
+    "population": 1372
+  },
+  {
+    "id": "dill-city",
+    "name": "Dill City",
+    "county": "Washita",
+    "population": 415
+  },
+  {
+    "id": "disney",
+    "name": "Disney",
+    "county": "Mayes",
+    "population": 227
+  },
+  {
+    "id": "dougherty",
+    "name": "Dougherty",
+    "county": "Murray",
+    "population": 191
+  },
+  {
+    "id": "douglas",
+    "name": "Douglas",
+    "county": "Garfield",
+    "population": 53
+  },
+  {
+    "id": "dover",
+    "name": "Dover",
+    "county": "Kingfisher",
+    "population": 411
+  },
+  {
+    "id": "drummond",
+    "name": "Drummond",
+    "county": "Garfield",
+    "population": 462
+  },
+  {
+    "id": "drumright",
+    "name": "Drumright",
+    "county": "Creek",
+    "population": 2527
+  },
+  {
+    "id": "duncan",
+    "name": "Duncan",
+    "county": "Stephens",
+    "population": 23174
+  },
+  {
+    "id": "durant",
+    "name": "Durant",
+    "county": "Bryan",
+    "population": 20908
+  },
+  {
+    "id": "dustin",
+    "name": "Dustin",
+    "county": "Hughes",
+    "population": 330
+  },
+  {
+    "id": "eakly",
+    "name": "Eakly",
+    "county": "Caddo",
+    "population": 287
+  },
+  {
+    "id": "earlsboro",
+    "name": "Earlsboro",
+    "county": "Pottawatomie",
+    "population": 611
+  },
+  {
+    "id": "east-duke",
+    "name": "East Duke",
+    "county": "Jackson",
+    "population": 397
+  },
+  {
+    "id": "edmond",
+    "name": "Edmond",
+    "county": "Oklahoma",
+    "population": 100479
+  },
+  {
+    "id": "el-reno",
+    "name": "El Reno",
+    "county": "Canadian",
+    "population": 20041
+  },
+  {
+    "id": "eldorado",
+    "name": "Eldorado",
+    "county": "Jackson",
+    "population": 315
+  },
+  {
+    "id": "elgin",
+    "name": "Elgin",
+    "county": "Comanche",
+    "population": 3613
+  },
+  {
+    "id": "elk-city",
+    "name": "Elk City",
+    "county": "Beckham",
+    "population": 11383
+  },
+  {
+    "id": "elmer",
+    "name": "Elmer",
+    "county": "Jackson",
+    "population": 63
+  },
+  {
+    "id": "elmore-city",
+    "name": "Elmore City",
+    "county": "Garvin",
+    "population": 751
+  },
+  {
+    "id": "empire-city",
+    "name": "Empire City",
+    "county": "Stephens",
+    "population": 736
+  },
+  {
+    "id": "enid",
+    "name": "Enid",
+    "county": "Garfield",
+    "population": 50519
+  },
+  {
+    "id": "erick",
+    "name": "Erick",
+    "county": "Beckham",
+    "population": 982
+  },
+  {
+    "id": "erin-springs",
+    "name": "Erin Springs",
+    "county": "Garvin",
+    "population": 63
+  },
+  {
+    "id": "etowah",
+    "name": "Etowah",
+    "county": "Cleveland",
+    "population": 165
+  },
+  {
+    "id": "eufaula",
+    "name": "Eufaula",
+    "county": "McIntosh",
+    "population": 2872
+  },
+  {
+    "id": "fair-oaks",
+    "name": "Fair Oaks",
+    "county": "Rogers",
+    "population": 73
+  },
+  {
+    "id": "fairfax",
+    "name": "Fairfax",
+    "county": "Osage",
+    "population": 1102
+  },
+  {
+    "id": "fairland",
+    "name": "Fairland",
+    "county": "Ottawa",
+    "population": 1109
+  },
+  {
+    "id": "fairmont",
+    "name": "Fairmont",
+    "county": "Garfield",
+    "population": 131
+  },
+  {
+    "id": "fairview",
+    "name": "Fairview",
+    "county": "Major",
+    "population": 2653
+  },
+  {
+    "id": "fallis",
+    "name": "Fallis",
+    "county": "Lincoln",
+    "population": 24
+  },
+  {
+    "id": "fanshawe",
+    "name": "Fanshawe",
+    "county": "LeFlore",
+    "population": 316
+  },
+  {
+    "id": "fargo",
+    "name": "Fargo",
+    "county": "Ellis",
+    "population": 302
+  },
+  {
+    "id": "faxon",
+    "name": "Faxon",
+    "county": "Comanche",
+    "population": 112
+  },
+  {
+    "id": "fitzhugh",
+    "name": "Fitzhugh",
+    "county": "Pontotoc",
+    "population": 187
+  },
+  {
+    "id": "fletcher",
+    "name": "Fletcher",
+    "county": "Comanche",
+    "population": 1251
+  },
+  {
+    "id": "foraker",
+    "name": "Foraker",
+    "county": "Osage",
+    "population": 17
+  },
+  {
+    "id": "forest-park",
+    "name": "Forest Park",
+    "county": "Oklahoma",
+    "population": 1043
+  },
+  {
+    "id": "forgan",
+    "name": "Forgan",
+    "county": "Beaver",
+    "population": 450
+  },
+  {
+    "id": "fort-cobb",
+    "name": "Fort Cobb",
+    "county": "Caddo",
+    "population": 505
+  },
+  {
+    "id": "fort-coffee",
+    "name": "Fort Coffee",
+    "county": "LeFlore",
+    "population": 349
+  },
+  {
+    "id": "fort-gibson",
+    "name": "Fort Gibson",
+    "county": "Muskogee",
+    "population": 3814
+  },
+  {
+    "id": "fort-supply",
+    "name": "Fort Supply",
+    "county": "Woodward",
+    "population": 319
+  },
+  {
+    "id": "fort-towson",
+    "name": "Fort Towson",
+    "county": "Choctaw",
+    "population": 494
+  },
+  {
+    "id": "foss",
+    "name": "Foss",
+    "county": "Washita",
+    "population": 103
+  },
+  {
+    "id": "foster",
+    "name": "Foster",
+    "county": "Garvin",
+    "population": 249
+  },
+  {
+    "id": "foyil",
+    "name": "Foyil",
+    "county": "Rogers",
+    "population": 443
+  },
+  {
+    "id": "francis",
+    "name": "Francis",
+    "county": "Pontotoc",
+    "population": 251
+  },
+  {
+    "id": "frederick",
+    "name": "Frederick",
+    "county": "Tillman",
+    "population": 3356
+  },
+  {
+    "id": "freedom",
+    "name": "Freedom",
+    "county": "Woods",
+    "population": 179
+  },
+  {
+    "id": "friendship",
+    "name": "Friendship",
+    "county": "Jackson",
+    "population": 23
+  },
+  {
+    "id": "gage",
+    "name": "Gage",
+    "county": "Ellis",
+    "population": 415
+  },
+  {
+    "id": "gans",
+    "name": "Gans",
+    "county": "Sequoyah",
+    "population": 252
+  },
+  {
+    "id": "garber",
+    "name": "Garber",
+    "county": "Garfield",
+    "population": 734
+  },
+  {
+    "id": "garvin",
+    "name": "Garvin",
+    "county": "McCurtain",
+    "population": 177
+  },
+  {
+    "id": "gate",
+    "name": "Gate",
+    "county": "Beaver",
+    "population": 57
+  },
+  {
+    "id": "geary",
+    "name": "Geary",
+    "county": "Canadian",
+    "population": 987
+  },
+  {
+    "id": "gene-autry",
+    "name": "Gene Autry",
+    "county": "Carter",
+    "population": 158
+  },
+  {
+    "id": "geronimo",
+    "name": "Geronimo",
+    "county": "Comanche",
+    "population": 1160
+  },
+  {
+    "id": "gerty",
+    "name": "Gerty",
+    "county": "Hughes",
+    "population": 93
+  },
+  {
+    "id": "glencoe",
+    "name": "Glencoe",
+    "county": "Payne",
+    "population": 516
+  },
+  {
+    "id": "glenpool",
+    "name": "Glenpool",
+    "county": "Tulsa",
+    "population": 14567
+  },
+  {
+    "id": "goldsby",
+    "name": "Goldsby",
+    "county": "McClain",
+    "population": 3516
+  },
+  {
+    "id": "goltry",
+    "name": "Goltry",
+    "county": "Alfalfa",
+    "population": 252
+  },
+  {
+    "id": "goodwell",
+    "name": "Goodwell",
+    "county": "Texas",
+    "population": 927
+  },
+  {
+    "id": "gore",
+    "name": "Gore",
+    "county": "Sequoyah",
+    "population": 999
+  },
+  {
+    "id": "gotebo",
+    "name": "Gotebo",
+    "county": "Kiowa",
+    "population": 164
+  },
+  {
+    "id": "gould",
+    "name": "Gould",
+    "county": "Harmon",
+    "population": 95
+  },
+  {
+    "id": "gracemont",
+    "name": "Gracemont",
+    "county": "Caddo",
+    "population": 277
+  },
+  {
+    "id": "grainola",
+    "name": "Grainola",
+    "county": "Osage",
+    "population": 33
+  },
+  {
+    "id": "grand-lake-towne",
+    "name": "Grand Lake Towne",
+    "county": "Mayes",
+    "population": 79
+  },
+  {
+    "id": "grandfield",
+    "name": "Grandfield",
+    "county": "Tillman",
+    "population": 883
+  },
+  {
+    "id": "granite",
+    "name": "Granite",
+    "county": "Greer",
+    "population": 1622
+  },
+  {
+    "id": "grayson",
+    "name": "Grayson",
+    "county": "Okmulgee",
+    "population": 134
+  },
+  {
+    "id": "greenfield",
+    "name": "Greenfield",
+    "county": "Blaine",
+    "population": 115
+  },
+  {
+    "id": "grove",
+    "name": "Grove",
+    "county": "Delaware",
+    "population": 7327
+  },
+  {
+    "id": "guthrie",
+    "name": "Guthrie",
+    "county": "Logan",
+    "population": 11682
+  },
+  {
+    "id": "guymon",
+    "name": "Guymon",
+    "county": "Texas",
+    "population": 12397
+  },
+  {
+    "id": "haileyville",
+    "name": "Haileyville",
+    "county": "Pittsburg",
+    "population": 698
+  },
+  {
+    "id": "hallett",
+    "name": "Hallett",
+    "county": "Pawnee",
+    "population": 112
+  },
+  {
+    "id": "hammon",
+    "name": "Hammon",
+    "county": "Roger Mills",
+    "population": 463
+  },
+  {
+    "id": "hanna",
+    "name": "Hanna",
+    "county": "McIntosh",
+    "population": 105
+  },
+  {
+    "id": "hardesty",
+    "name": "Hardesty",
+    "county": "Texas",
+    "population": 201
+  },
+  {
+    "id": "harrah",
+    "name": "Harrah",
+    "county": "Oklahoma",
+    "population": 6853
+  },
+  {
+    "id": "hartshorne",
+    "name": "Hartshorne",
+    "county": "Pittsburg",
+    "population": 1886
+  },
+  {
+    "id": "haskell",
+    "name": "Haskell",
+    "county": "Muskogee",
+    "population": 1721
+  },
+  {
+    "id": "hastings",
+    "name": "Hastings",
+    "county": "Jefferson",
+    "population": 107
+  },
+  {
+    "id": "haworth",
+    "name": "Haworth",
+    "county": "McCurtain",
+    "population": 284
+  },
+  {
+    "id": "headrick",
+    "name": "Headrick",
+    "county": "Jackson",
+    "population": 73
+  },
+  {
+    "id": "healdton",
+    "name": "Healdton",
+    "county": "Carter",
+    "population": 2376
+  },
+  {
+    "id": "heavener",
+    "name": "Heavener",
+    "county": "LeFlore",
+    "population": 3057
+  },
+  {
+    "id": "helena",
+    "name": "Helena",
+    "county": "Alfalfa",
+    "population": 1533
+  },
+  {
+    "id": "hendrix",
+    "name": "Hendrix",
+    "county": "Bryan",
+    "population": 67
+  },
+  {
+    "id": "hennessey",
+    "name": "Hennessey",
+    "county": "Kingfisher",
+    "population": 2223
+  },
+  {
+    "id": "henryetta",
+    "name": "Henryetta",
+    "county": "Okmulgee",
+    "population": 5606
+  },
+  {
+    "id": "hickory",
+    "name": "Hickory",
+    "county": "Murray",
+    "population": 82
+  },
+  {
+    "id": "hillsdale",
+    "name": "Hillsdale",
+    "county": "Garfield",
+    "population": 73
+  },
+  {
+    "id": "hinton",
+    "name": "Hinton",
+    "county": "Caddo",
+    "population": 4931
+  },
+  {
+    "id": "hitchcock",
+    "name": "Hitchcock",
+    "county": "Blaine",
+    "population": 98
+  },
+  {
+    "id": "hitchita",
+    "name": "Hitchita",
+    "county": "McIntosh",
+    "population": 63
+  },
+  {
+    "id": "hobart",
+    "name": "Hobart",
+    "county": "Kiowa",
+    "population": 3300
+  },
+  {
+    "id": "hoffman",
+    "name": "Hoffman",
+    "county": "Okfuskee",
+    "population": 85
+  },
+  {
+    "id": "holdenville",
+    "name": "Holdenville",
+    "county": "Hughes",
+    "population": 5893
+  },
+  {
+    "id": "hollis",
+    "name": "Hollis",
+    "county": "Harmon",
+    "population": 1665
+  },
+  {
+    "id": "hollister",
+    "name": "Hollister",
+    "county": "Tillman",
+    "population": 34
+  },
+  {
+    "id": "hominy",
+    "name": "Hominy",
+    "county": "Osage",
+    "population": 3286
+  },
+  {
+    "id": "hooker",
+    "name": "Hooker",
+    "county": "Texas",
+    "population": 1732
+  },
+  {
+    "id": "horntown",
+    "name": "Horntown",
+    "county": "Hughes",
+    "population": 93
+  },
+  {
+    "id": "howe",
+    "name": "Howe",
+    "county": "LeFlore",
+    "population": 639
+  },
+  {
+    "id": "hugo",
+    "name": "Hugo",
+    "county": "Choctaw",
+    "population": 5142
+  },
+  {
+    "id": "hulbert",
+    "name": "Hulbert",
+    "county": "Cherokee",
+    "population": 493
+  },
+  {
+    "id": "hunter",
+    "name": "Hunter",
+    "county": "Garfield",
+    "population": 141
+  },
+  {
+    "id": "hydro",
+    "name": "Hydro",
+    "county": "Caddo",
+    "population": 907
+  },
+  {
+    "id": "idabel",
+    "name": "Idabel",
+    "county": "McCurtain",
+    "population": 6983
+  },
+  {
+    "id": "indiahoma",
+    "name": "Indiahoma",
+    "county": "Comanche",
+    "population": 274
+  },
+  {
+    "id": "indianola",
+    "name": "Indianola",
+    "county": "Pittsburg",
+    "population": 144
+  },
+  {
+    "id": "inola",
+    "name": "Inola",
+    "county": "Rogers",
+    "population": 1895
+  },
+  {
+    "id": "ixl",
+    "name": "IXL",
+    "county": "Okfuskee",
+    "population": 60
+  },
+  {
+    "id": "jay",
+    "name": "Jay",
+    "county": "Delaware",
+    "population": 2474
+  },
+  {
+    "id": "jefferson",
+    "name": "Jefferson",
+    "county": "Grant",
+    "population": 10
+  },
+  {
+    "id": "jenks",
+    "name": "Jenks",
+    "county": "Tulsa",
+    "population": 27869
+  },
+  {
+    "id": "jennings",
+    "name": "Jennings",
+    "county": "Pawnee",
+    "population": 293
+  },
+  {
+    "id": "jet",
+    "name": "Jet",
+    "county": "Alfalfa",
+    "population": 197
+  },
+  {
+    "id": "johnson",
+    "name": "Johnson",
+    "county": "Pottawatomie",
+    "population": 469
+  },
+  {
+    "id": "jones",
+    "name": "Jones",
+    "county": "Oklahoma",
+    "population": 3213
+  },
+  {
+    "id": "kansas",
+    "name": "Kansas",
+    "county": "Delaware",
+    "population": 753
+  },
+  {
+    "id": "katie",
+    "name": "Katie",
+    "county": "Garvin",
+    "population": 346
+  },
+  {
+    "id": "kaw-city",
+    "name": "Kaw City",
+    "county": "Kay",
+    "population": 327
+  },
+  {
+    "id": "kellyville",
+    "name": "Kellyville",
+    "county": "Creek",
+    "population": 1049
+  },
+  {
+    "id": "kemp",
+    "name": "Kemp",
+    "county": "Bryan",
+    "population": 133
+  },
+  {
+    "id": "kendrick",
+    "name": "Kendrick",
+    "county": "Lincoln",
+    "population": 95
+  },
+  {
+    "id": "kenefic",
+    "name": "Kenefic",
+    "county": "Bryan",
+    "population": 159
+  },
+  {
+    "id": "keota",
+    "name": "Keota",
+    "county": "Haskell",
+    "population": 447
+  },
+  {
+    "id": "ketchum",
+    "name": "Ketchum",
+    "county": "Craig",
+    "population": 516
+  },
+  {
+    "id": "keyes",
+    "name": "Keyes",
+    "county": "Cimarron",
+    "population": 254
+  },
+  {
+    "id": "kiefer",
+    "name": "Kiefer",
+    "county": "Creek",
+    "population": 2271
+  },
+  {
+    "id": "kildare",
+    "name": "Kildare",
+    "county": "Kay",
+    "population": 86
+  },
+  {
+    "id": "kingfisher",
+    "name": "Kingfisher",
+    "county": "Kingfisher",
+    "population": 5192
+  },
+  {
+    "id": "kingston",
+    "name": "Kingston",
+    "county": "Marshall",
+    "population": 1477
+  },
+  {
+    "id": "kinta",
+    "name": "Kinta",
+    "county": "Haskell",
+    "population": 285
+  },
+  {
+    "id": "kiowa",
+    "name": "Kiowa",
+    "county": "Pittsburg",
+    "population": 607
+  },
+  {
+    "id": "knowles",
+    "name": "Knowles",
+    "county": "Beaver",
+    "population": 5
+  },
+  {
+    "id": "konawa",
+    "name": "Konawa",
+    "county": "Seminole",
+    "population": 1246
+  },
+  {
+    "id": "krebs",
+    "name": "Krebs",
+    "county": "Pittsburg",
+    "population": 2068
+  },
+  {
+    "id": "kremlin",
+    "name": "Kremlin",
+    "county": "Garfield",
+    "population": 247
+  },
+  {
+    "id": "lahoma",
+    "name": "Lahoma",
+    "county": "Garfield",
+    "population": 526
+  },
+  {
+    "id": "lake-aluma",
+    "name": "Lake Aluma",
+    "county": "Oklahoma",
+    "population": 87
+  },
+  {
+    "id": "lamar",
+    "name": "Lamar",
+    "county": "Hughes",
+    "population": 124
+  },
+  {
+    "id": "lambert",
+    "name": "Lambert",
+    "county": "Alfalfa",
+    "population": 6
+  },
+  {
+    "id": "lamont",
+    "name": "Lamont",
+    "county": "Grant",
+    "population": 293
+  },
+  {
+    "id": "langley",
+    "name": "Langley",
+    "county": "Mayes",
+    "population": 637
+  },
+  {
+    "id": "langston",
+    "name": "Langston",
+    "county": "Logan",
+    "population": 1715
+  },
+  {
+    "id": "laverne",
+    "name": "Laverne",
+    "county": "Harper",
+    "population": 1198
+  },
+  {
+    "id": "lawrence-creek",
+    "name": "Lawrence Creek",
+    "county": "Creek",
+    "population": 129
+  },
+  {
+    "id": "lawton",
+    "name": "Lawton",
+    "county": "Comanche",
+    "population": 90027
+  },
+  {
+    "id": "leedey",
+    "name": "Leedey",
+    "county": "Dewey",
+    "population": 393
+  },
+  {
+    "id": "leflore",
+    "name": "LeFlore",
+    "county": "LeFlore",
+    "population": 156
+  },
+  {
+    "id": "lehigh",
+    "name": "Lehigh",
+    "county": "Coal",
+    "population": 279
+  },
+  {
+    "id": "lenapah",
+    "name": "Lenapah",
+    "county": "Nowata",
+    "population": 281
+  },
+  {
+    "id": "leon",
+    "name": "Leon",
+    "county": "Love",
+    "population": 78
+  },
+  {
+    "id": "lexington",
+    "name": "Lexington",
+    "county": "Cleveland",
+    "population": 2055
+  },
+  {
+    "id": "liberty",
+    "name": "Liberty",
+    "county": "Tulsa",
+    "population": 157
+  },
+  {
+    "id": "lima",
+    "name": "Lima",
+    "county": "Seminole",
+    "population": 67
+  },
+  {
+    "id": "lindsay",
+    "name": "Lindsay",
+    "county": "Garvin",
+    "population": 2910
+  },
+  {
+    "id": "loco",
+    "name": "Loco",
+    "county": "Stephens",
+    "population": 106
+  },
+  {
+    "id": "locust-grove",
+    "name": "Locust Grove",
+    "county": "Mayes",
+    "population": 1399
+  },
+  {
+    "id": "lone-chimney",
+    "name": "Lone Chimney",
+    "county": "Pawnee",
+    "population": 78
+  },
+  {
+    "id": "lone-grove",
+    "name": "Lone Grove",
+    "county": "Carter",
+    "population": 5276
+  },
+  {
+    "id": "lone-wolf",
+    "name": "Lone Wolf",
+    "county": "Kiowa",
+    "population": 359
+  },
+  {
+    "id": "longdale",
+    "name": "Longdale",
+    "county": "Blaine",
+    "population": 182
+  },
+  {
+    "id": "lookeba",
+    "name": "Lookeba",
+    "county": "Caddo",
+    "population": 108
+  },
+  {
+    "id": "lotsee",
+    "name": "Lotsee",
+    "county": "Tulsa",
+    "population": 4
+  },
+  {
+    "id": "loveland",
+    "name": "Loveland",
+    "county": "Tillman",
+    "population": 14
+  },
+  {
+    "id": "loyal",
+    "name": "Loyal",
+    "county": "Kingfisher",
+    "population": 71
+  },
+  {
+    "id": "luther",
+    "name": "Luther",
+    "county": "Oklahoma",
+    "population": 1671
+  },
+  {
+    "id": "macomb",
+    "name": "Macomb",
+    "county": "Pottawatomie",
+    "population": 22
+  },
+  {
+    "id": "madill",
+    "name": "Madill",
+    "county": "Marshall",
+    "population": 4084
+  },
+  {
+    "id": "manchester",
+    "name": "Manchester",
+    "county": "Grant",
+    "population": 90
+  },
+  {
+    "id": "mangum",
+    "name": "Mangum",
+    "county": "Greer",
+    "population": 2719
+  },
+  {
+    "id": "manitou",
+    "name": "Manitou",
+    "county": "Tillman",
+    "population": 168
+  },
+  {
+    "id": "mannford",
+    "name": "Mannford",
+    "county": "Creek",
+    "population": 3429
+  },
+  {
+    "id": "mannsville",
+    "name": "Mannsville",
+    "county": "Johnston",
+    "population": 736
+  },
+  {
+    "id": "maramec",
+    "name": "Maramec",
+    "county": "Pawnee",
+    "population": 69
+  },
+  {
+    "id": "marble-city",
+    "name": "Marble City",
+    "county": "Sequoyah",
+    "population": 185
+  },
+  {
+    "id": "marietta",
+    "name": "Marietta",
+    "county": "Love",
+    "population": 2891
+  },
+  {
+    "id": "marland",
+    "name": "Marland",
+    "county": "Noble",
+    "population": 183
+  },
+  {
+    "id": "marlow",
+    "name": "Marlow",
+    "county": "Stephens",
+    "population": 4505
+  },
+  {
+    "id": "marshall",
+    "name": "Marshall",
+    "county": "Logan",
+    "population": 224
+  },
+  {
+    "id": "martha",
+    "name": "Martha",
+    "county": "Jackson",
+    "population": 159
+  },
+  {
+    "id": "maud",
+    "name": "Maud",
+    "county": "Pottawatomie",
+    "population": 868
+  },
+  {
+    "id": "may",
+    "name": "May",
+    "county": "Harper",
+    "population": 30
+  },
+  {
+    "id": "maysville",
+    "name": "Maysville",
+    "county": "McClain",
+    "population": 1087
+  },
+  {
+    "id": "mcalester",
+    "name": "McAlester",
+    "county": "Pittsburg",
+    "population": 18108
+  },
+  {
+    "id": "mccurtain",
+    "name": "McCurtain",
+    "county": "Haskell",
+    "population": 360
+  },
+  {
+    "id": "mcloud",
+    "name": "McLoud",
+    "county": "Pottawatomie",
+    "population": 4519
+  },
+  {
+    "id": "mead",
+    "name": "Mead",
+    "county": "Bryan",
+    "population": 239
+  },
+  {
+    "id": "medford",
+    "name": "Medford",
+    "county": "Grant",
+    "population": 915
+  },
+  {
+    "id": "medicine-park",
+    "name": "Medicine Park",
+    "county": "Comanche",
+    "population": 474
+  },
+  {
+    "id": "meeker",
+    "name": "Meeker",
+    "county": "Lincoln",
+    "population": 1029
+  },
+  {
+    "id": "meno",
+    "name": "Meno",
+    "county": "Major",
+    "population": 194
+  },
+  {
+    "id": "meridian",
+    "name": "Meridian",
+    "county": "Logan",
+    "population": 16
+  },
+  {
+    "id": "miami",
+    "name": "Miami",
+    "county": "Ottawa",
+    "population": 12886
+  },
+  {
+    "id": "midwest-city",
+    "name": "Midwest City",
+    "county": "Oklahoma",
+    "population": 58505
+  },
+  {
+    "id": "milburn",
+    "name": "Milburn",
+    "county": "Johnston",
+    "population": 250
+  },
+  {
+    "id": "mill-creek",
+    "name": "Mill Creek",
+    "county": "Johnston",
+    "population": 291
+  },
+  {
+    "id": "millerton",
+    "name": "Millerton",
+    "county": "McCurtain",
+    "population": 213
+  },
+  {
+    "id": "minco",
+    "name": "Minco",
+    "county": "Grady",
+    "population": 1548
+  },
+  {
+    "id": "moffett",
+    "name": "Moffett",
+    "county": "Sequoyah",
+    "population": 32
+  },
+  {
+    "id": "moore",
+    "name": "Moore",
+    "county": "Cleveland",
+    "population": 63845
+  },
+  {
+    "id": "mooreland",
+    "name": "Mooreland",
+    "county": "Woodward",
+    "population": 1135
+  },
+  {
+    "id": "morris",
+    "name": "Morris",
+    "county": "Okmulgee",
+    "population": 1334
+  },
+  {
+    "id": "morrison",
+    "name": "Morrison",
+    "county": "Noble",
+    "population": 719
+  },
+  {
+    "id": "mounds",
+    "name": "Mounds",
+    "county": "Creek",
+    "population": 984
+  },
+  {
+    "id": "mountain-park",
+    "name": "Mountain Park",
+    "county": "Kiowa",
+    "population": 314
+  },
+  {
+    "id": "mountain-view",
+    "name": "Mountain View",
+    "county": "Kiowa",
+    "population": 721
+  },
+  {
+    "id": "muldrow",
+    "name": "Muldrow",
+    "county": "Sequoyah",
+    "population": 3358
+  },
+  {
+    "id": "mulhall",
+    "name": "Mulhall",
+    "county": "Payne",
+    "population": 235
+  },
+  {
+    "id": "muskogee",
+    "name": "Muskogee",
+    "county": "Muskogee",
+    "population": 36849
+  },
+  {
+    "id": "mustang",
+    "name": "Mustang",
+    "county": "Canadian",
+    "population": 23965
+  },
+  {
+    "id": "mutual",
+    "name": "Mutual",
+    "county": "Woodward",
+    "population": 61
+  },
+  {
+    "id": "nash",
+    "name": "Nash",
+    "county": "Grant",
+    "population": 187
+  },
+  {
+    "id": "new-alluwe",
+    "name": "New Alluwe",
+    "county": "Nowata",
+    "population": 88
+  },
+  {
+    "id": "new-cordell",
+    "name": "New Cordell",
+    "county": "Washita",
+    "population": 2744
+  },
+  {
+    "id": "new-woodville",
+    "name": "New Woodville",
+    "county": "Marshall",
+    "population": 43
+  },
+  {
+    "id": "newcastle",
+    "name": "Newcastle",
+    "county": "McClain",
+    "population": 14677
+  },
+  {
+    "id": "newkirk",
+    "name": "Newkirk",
+    "county": "Kay",
+    "population": 2243
+  },
+  {
+    "id": "nichols-hills",
+    "name": "Nichols Hills",
+    "county": "Oklahoma",
+    "population": 3851
+  },
+  {
+    "id": "nicoma-park",
+    "name": "Nicoma Park",
+    "county": "Oklahoma",
+    "population": 2294
+  },
+  {
+    "id": "ninnekah",
+    "name": "Ninnekah",
+    "county": "Grady",
+    "population": 820
+  },
+  {
+    "id": "noble",
+    "name": "Noble",
+    "county": "Cleveland",
+    "population": 7779
+  },
+  {
+    "id": "norge",
+    "name": "Norge",
+    "county": "Grady",
+    "population": 125
+  },
+  {
+    "id": "norman",
+    "name": "Norman",
+    "county": "Cleveland",
+    "population": 131010
+  },
+  {
+    "id": "north-enid",
+    "name": "North Enid",
+    "county": "Garfield",
+    "population": 1002
+  },
+  {
+    "id": "north-miami",
+    "name": "North Miami",
+    "county": "Ottawa",
+    "population": 295
+  },
+  {
+    "id": "nowata",
+    "name": "Nowata",
+    "county": "Nowata",
+    "population": 3592
+  },
+  {
+    "id": "oak-grove",
+    "name": "Oak Grove",
+    "county": "Pawnee",
+    "population": 48
+  },
+  {
+    "id": "oakland",
+    "name": "Oakland",
+    "county": "Marshall",
+    "population": 916
+  },
+  {
+    "id": "oaks",
+    "name": "Oaks",
+    "county": "Delaware",
+    "population": 268
+  },
+  {
+    "id": "oakwood",
+    "name": "Oakwood",
+    "county": "Dewey",
+    "population": 71
+  },
+  {
+    "id": "ochelata",
+    "name": "Ochelata",
+    "county": "Washington",
+    "population": 443
+  },
+  {
+    "id": "oilton",
+    "name": "Oilton",
+    "county": "Creek",
+    "population": 891
+  },
+  {
+    "id": "okarche",
+    "name": "Okarche",
+    "county": "Canadian",
+    "population": 1193
+  },
+  {
+    "id": "okay",
+    "name": "Okay",
+    "county": "Wagoner",
+    "population": 585
+  },
+  {
+    "id": "okeene",
+    "name": "Okeene",
+    "county": "Blaine",
+    "population": 1052
+  },
+  {
+    "id": "okemah",
+    "name": "Okemah",
+    "county": "Okfuskee",
+    "population": 3066
+  },
+  {
+    "id": "oklahoma-city",
+    "name": "Oklahoma City",
+    "county": "Oklahoma",
+    "population": 712919
+  },
+  {
+    "id": "okmulgee",
+    "name": "Okmulgee",
+    "county": "Okmulgee",
+    "population": 11354
+  },
+  {
+    "id": "oktaha",
+    "name": "Oktaha",
+    "county": "McIntosh",
+    "population": 346
+  },
+  {
+    "id": "olustee",
+    "name": "Olustee",
+    "county": "Jackson",
+    "population": 459
+  },
+  {
+    "id": "oologah",
+    "name": "Oologah",
+    "county": "Rogers",
+    "population": 1350
+  },
+  {
+    "id": "optima",
+    "name": "Optima",
+    "county": "Texas",
+    "population": 327
+  },
+  {
+    "id": "orlando",
+    "name": "Orlando",
+    "county": "Logan",
+    "population": 139
+  },
+  {
+    "id": "osage",
+    "name": "Osage",
+    "county": "Osage",
+    "population": 177
+  },
+  {
+    "id": "owasso",
+    "name": "Owasso",
+    "county": "Tulsa",
+    "population": 42821
+  },
+  {
+    "id": "paden",
+    "name": "Paden",
+    "county": "Okfuskee",
+    "population": 423
+  },
+  {
+    "id": "panama",
+    "name": "Panama",
+    "county": "LeFlore",
+    "population": 1299
+  },
+  {
+    "id": "paoli",
+    "name": "Paoli",
+    "county": "Garvin",
+    "population": 591
+  },
+  {
+    "id": "paradise-hill",
+    "name": "Paradise Hill",
+    "county": "Sequoyah",
+    "population": 70
+  },
+  {
+    "id": "pauls-valley",
+    "name": "Pauls Valley",
+    "county": "Garvin",
+    "population": 6112
+  },
+  {
+    "id": "pawhuska",
+    "name": "Pawhuska",
+    "county": "Osage",
+    "population": 2923
+  },
+  {
+    "id": "pawnee",
+    "name": "Pawnee",
+    "county": "Pawnee",
+    "population": 1971
+  },
+  {
+    "id": "pensacola",
+    "name": "Pensacola",
+    "county": "Mayes",
+    "population": 107
+  },
+  {
+    "id": "peoria",
+    "name": "Peoria",
+    "county": "Ottawa",
+    "population": 130
+  },
+  {
+    "id": "perkins",
+    "name": "Perkins",
+    "county": "Payne",
+    "population": 3292
+  },
+  {
+    "id": "perry",
+    "name": "Perry",
+    "county": "Noble",
+    "population": 4448
+  },
+  {
+    "id": "phillips",
+    "name": "Phillips",
+    "county": "Coal",
+    "population": 128
+  },
+  {
+    "id": "piedmont",
+    "name": "Piedmont",
+    "county": "Canadian",
+    "population": 9092
+  },
+  {
+    "id": "pink",
+    "name": "Pink",
+    "county": "Pottawatomie",
+    "population": 2179
+  },
+  {
+    "id": "pittsburg",
+    "name": "Pittsburg",
+    "county": "Pittsburg",
+    "population": 178
+  },
+  {
+    "id": "pocasset",
+    "name": "Pocasset",
+    "county": "Grady",
+    "population": 192
+  },
+  {
+    "id": "pocola",
+    "name": "Pocola",
+    "county": "LeFlore",
+    "population": 4588
+  },
+  {
+    "id": "ponca-city",
+    "name": "Ponca City",
+    "county": "Kay",
+    "population": 24234
+  },
+  {
+    "id": "pond-creek",
+    "name": "Pond Creek",
+    "county": "Grant",
+    "population": 893
+  },
+  {
+    "id": "porter",
+    "name": "Porter",
+    "county": "Wagoner",
+    "population": 640
+  },
+  {
+    "id": "porum",
+    "name": "Porum",
+    "county": "Muskogee",
+    "population": 611
+  },
+  {
+    "id": "poteau",
+    "name": "Poteau",
+    "county": "LeFlore",
+    "population": 9111
+  },
+  {
+    "id": "prague",
+    "name": "Prague",
+    "county": "Lincoln",
+    "population": 2414
+  },
+  {
+    "id": "prue",
+    "name": "Prue",
+    "county": "Osage",
+    "population": 396
+  },
+  {
+    "id": "pryor-creek",
+    "name": "Pryor Creek",
+    "county": "Mayes",
+    "population": 9700
+  },
+  {
+    "id": "purcell",
+    "name": "Purcell",
+    "county": "McClain",
+    "population": 6938
+  },
+  {
+    "id": "putnam",
+    "name": "Putnam",
+    "county": "Dewey",
+    "population": 27
+  },
+  {
+    "id": "quapaw",
+    "name": "Quapaw",
+    "county": "Ottawa",
+    "population": 829
+  },
+  {
+    "id": "quinton",
+    "name": "Quinton",
+    "county": "Pittsburg",
+    "population": 848
+  },
+  {
+    "id": "ralston",
+    "name": "Ralston",
+    "county": "Pawnee",
+    "population": 273
+  },
+  {
+    "id": "ramona",
+    "name": "Ramona",
+    "county": "Washington",
+    "population": 548
+  },
+  {
+    "id": "randlett",
+    "name": "Randlett",
+    "county": "Cotton",
+    "population": 297
+  },
+  {
+    "id": "ratliff-city",
+    "name": "Ratliff City",
+    "county": "Carter",
+    "population": 65
+  },
+  {
+    "id": "rattan",
+    "name": "Rattan",
+    "county": "Pushmataha",
+    "population": 279
+  },
+  {
+    "id": "ravia",
+    "name": "Ravia",
+    "county": "Johnston",
+    "population": 467
+  },
+  {
+    "id": "red-oak",
+    "name": "Red Oak",
+    "county": "Latimer",
+    "population": 529
+  },
+  {
+    "id": "red-rock",
+    "name": "Red Rock",
+    "county": "Noble",
+    "population": 249
+  },
+  {
+    "id": "redbird",
+    "name": "Redbird",
+    "county": "Wagoner",
+    "population": 100
+  },
+  {
+    "id": "renfrow",
+    "name": "Renfrow",
+    "county": "Grant",
+    "population": 18
+  },
+  {
+    "id": "rentiesville",
+    "name": "Rentiesville",
+    "county": "McIntosh",
+    "population": 107
+  },
+  {
+    "id": "reydon",
+    "name": "Reydon",
+    "county": "Roger Mills",
+    "population": 132
+  },
+  {
+    "id": "ringling",
+    "name": "Ringling",
+    "county": "Jefferson",
+    "population": 875
+  },
+  {
+    "id": "ringwood",
+    "name": "Ringwood",
+    "county": "Major",
+    "population": 397
+  },
+  {
+    "id": "ripley",
+    "name": "Ripley",
+    "county": "Payne",
+    "population": 354
+  },
+  {
+    "id": "rock-island",
+    "name": "Rock Island",
+    "county": "LeFlore",
+    "population": 751
+  },
+  {
+    "id": "rocky",
+    "name": "Rocky",
+    "county": "Washita",
+    "population": 127
+  },
+  {
+    "id": "roff",
+    "name": "Roff",
+    "county": "Pontotoc",
+    "population": 629
+  },
+  {
+    "id": "roland",
+    "name": "Roland",
+    "county": "Sequoyah",
+    "population": 4021
+  },
+  {
+    "id": "roosevelt",
+    "name": "Roosevelt",
+    "county": "Kiowa",
+    "population": 250
+  },
+  {
+    "id": "rosedale",
+    "name": "Rosedale",
+    "county": "McClain",
+    "population": 68
+  },
+  {
+    "id": "rosston",
+    "name": "Rosston",
+    "county": "Harper",
+    "population": 49
+  },
+  {
+    "id": "rush-springs",
+    "name": "Rush Springs",
+    "county": "Grady",
+    "population": 1024
+  },
+  {
+    "id": "ryan",
+    "name": "Ryan",
+    "county": "Jefferson",
+    "population": 668
+  },
+  {
+    "id": "salina",
+    "name": "Salina",
+    "county": "Mayes",
+    "population": 1106
+  },
+  {
+    "id": "sallisaw",
+    "name": "Sallisaw",
+    "county": "Sequoyah",
+    "population": 8708
+  },
+  {
+    "id": "sand-springs",
+    "name": "Sand Springs",
+    "county": "Tulsa",
+    "population": 20330
+  },
+  {
+    "id": "sapulpa",
+    "name": "Sapulpa",
+    "county": "Creek",
+    "population": 23297
+  },
+  {
+    "id": "sasakwa",
+    "name": "Sasakwa",
+    "county": "Seminole",
+    "population": 78
+  },
+  {
+    "id": "savanna",
+    "name": "Savanna",
+    "county": "Pittsburg",
+    "population": 615
+  },
+  {
+    "id": "sawyer",
+    "name": "Sawyer",
+    "county": "Choctaw",
+    "population": 337
+  },
+  {
+    "id": "sayre",
+    "name": "Sayre",
+    "county": "Beckham",
+    "population": 4841
+  },
+  {
+    "id": "schulter",
+    "name": "Schulter",
+    "county": "Okmulgee",
+    "population": 433
+  },
+  {
+    "id": "seiling",
+    "name": "Seiling",
+    "county": "Dewey",
+    "population": 809
+  },
+  {
+    "id": "seminole",
+    "name": "Seminole",
+    "county": "Seminole",
+    "population": 7264
+  },
+  {
+    "id": "sentinel",
+    "name": "Sentinel",
+    "county": "Washita",
+    "population": 755
+  },
+  {
+    "id": "shady-point",
+    "name": "Shady Point",
+    "county": "LeFlore",
+    "population": 1000
+  },
+  {
+    "id": "sharon",
+    "name": "Sharon",
+    "county": "Woodward",
+    "population": 130
+  },
+  {
+    "id": "shattuck",
+    "name": "Shattuck",
+    "county": "Ellis",
+    "population": 1191
+  },
+  {
+    "id": "shawnee",
+    "name": "Shawnee",
+    "county": "Pottawatomie",
+    "population": 32092
+  },
+  {
+    "id": "shidler",
+    "name": "Shidler",
+    "county": "Osage",
+    "population": 331
+  },
+  {
+    "id": "silo",
+    "name": "Silo",
+    "county": "Bryan",
+    "population": 402
+  },
+  {
+    "id": "skedee",
+    "name": "Skedee",
+    "county": "Pawnee",
+    "population": 67
+  },
+  {
+    "id": "skiatook",
+    "name": "Skiatook",
+    "county": "Tulsa",
+    "population": 8879
+  },
+  {
+    "id": "slaughterville",
+    "name": "Slaughterville",
+    "county": "Cleveland",
+    "population": 4324
+  },
+  {
+    "id": "slick",
+    "name": "Slick",
+    "county": "Creek",
+    "population": 148
+  },
+  {
+    "id": "smith-village",
+    "name": "Smith Village",
+    "county": "Oklahoma",
+    "population": 51
+  },
+  {
+    "id": "smithville",
+    "name": "Smithville",
+    "county": "McCurtain",
+    "population": 105
+  },
+  {
+    "id": "snyder",
+    "name": "Snyder",
+    "county": "Kiowa",
+    "population": 1229
+  },
+  {
+    "id": "soper",
+    "name": "Soper",
+    "county": "Choctaw",
+    "population": 226
+  },
+  {
+    "id": "south-coffeyville",
+    "name": "South Coffeyville",
+    "county": "Nowata",
+    "population": 694
+  },
+  {
+    "id": "sparks",
+    "name": "Sparks",
+    "county": "Lincoln",
+    "population": 124
+  },
+  {
+    "id": "spaulding",
+    "name": "Spaulding",
+    "county": "Hughes",
+    "population": 149
+  },
+  {
+    "id": "spavinaw",
+    "name": "Spavinaw",
+    "county": "Mayes",
+    "population": 357
+  },
+  {
+    "id": "spencer",
+    "name": "Spencer",
+    "county": "Oklahoma",
+    "population": 3883
+  },
+  {
+    "id": "sperry",
+    "name": "Sperry",
+    "county": "Tulsa",
+    "population": 1244
+  },
+  {
+    "id": "spiro",
+    "name": "Spiro",
+    "county": "LeFlore",
+    "population": 2197
+  },
+  {
+    "id": "sportsmen-acres",
+    "name": "Sportsmen Acres",
+    "county": "Mayes",
+    "population": 338
+  },
+  {
+    "id": "springer",
+    "name": "Springer",
+    "county": "Carter",
+    "population": 707
+  },
+  {
+    "id": "st-louis",
+    "name": "St. Louis",
+    "county": "Pottawatomie",
+    "population": 127
+  },
+  {
+    "id": "sterling",
+    "name": "Sterling",
+    "county": "Comanche",
+    "population": 668
+  },
+  {
+    "id": "stidham",
+    "name": "Stidham",
+    "county": "McIntosh",
+    "population": 19
+  },
+  {
+    "id": "stigler",
+    "name": "Stigler",
+    "county": "Haskell",
+    "population": 2784
+  },
+  {
+    "id": "stillwater",
+    "name": "Stillwater",
+    "county": "Payne",
+    "population": 50138
+  },
+  {
+    "id": "stilwell",
+    "name": "Stilwell",
+    "county": "Adair",
+    "population": 3855
+  },
+  {
+    "id": "stonewall",
+    "name": "Stonewall",
+    "county": "Pontotoc",
+    "population": 417
+  },
+  {
+    "id": "strang",
+    "name": "Strang",
+    "county": "Mayes",
+    "population": 67
+  },
+  {
+    "id": "stratford",
+    "name": "Stratford",
+    "county": "Garvin",
+    "population": 1427
+  },
+  {
+    "id": "stringtown",
+    "name": "Stringtown",
+    "county": "Atoka",
+    "population": 433
+  },
+  {
+    "id": "strong-city",
+    "name": "Strong City",
+    "county": "Roger Mills",
+    "population": 29
+  },
+  {
+    "id": "stroud",
+    "name": "Stroud",
+    "county": "Lincoln",
+    "population": 2862
+  },
+  {
+    "id": "stuart",
+    "name": "Stuart",
+    "county": "Hughes",
+    "population": 192
+  },
+  {
+    "id": "sugden",
+    "name": "Sugden",
+    "county": "Jefferson",
+    "population": 22
+  },
+  {
+    "id": "sulphur",
+    "name": "Sulphur",
+    "county": "Murray",
+    "population": 4844
+  },
+  {
+    "id": "summit",
+    "name": "Summit",
+    "county": "Muskogee",
+    "population": 112
+  },
+  {
+    "id": "sweetwater",
+    "name": "Sweetwater",
+    "county": "Beckham",
+    "population": 102
+  },
+  {
+    "id": "taft",
+    "name": "Taft",
+    "county": "Muskogee",
+    "population": 173
+  },
+  {
+    "id": "tahlequah",
+    "name": "Tahlequah",
+    "county": "Cherokee",
+    "population": 17319
+  },
+  {
+    "id": "talala",
+    "name": "Talala",
+    "county": "Rogers",
+    "population": 266
+  },
+  {
+    "id": "talihina",
+    "name": "Talihina",
+    "county": "LeFlore",
+    "population": 932
+  },
+  {
+    "id": "taloga",
+    "name": "Taloga",
+    "county": "Dewey",
+    "population": 276
+  },
+  {
+    "id": "tamaha",
+    "name": "Tamaha",
+    "county": "Haskell",
+    "population": 154
+  },
+  {
+    "id": "tatums",
+    "name": "Tatums",
+    "county": "Carter",
+    "population": 119
+  },
+  {
+    "id": "tecumseh",
+    "name": "Tecumseh",
+    "county": "Pottawatomie",
+    "population": 6370
+  },
+  {
+    "id": "temple",
+    "name": "Temple",
+    "county": "Cotton",
+    "population": 847
+  },
+  {
+    "id": "terlton",
+    "name": "Terlton",
+    "county": "Pawnee",
+    "population": 83
+  },
+  {
+    "id": "terral",
+    "name": "Terral",
+    "county": "Jefferson",
+    "population": 279
+  },
+  {
+    "id": "texhoma",
+    "name": "Texhoma",
+    "county": "Texas",
+    "population": 835
+  },
+  {
+    "id": "texola",
+    "name": "Texola",
+    "county": "Beckham",
+    "population": 41
+  },
+  {
+    "id": "thackerville",
+    "name": "Thackerville",
+    "county": "Love",
+    "population": 411
+  },
+  {
+    "id": "the-village",
+    "name": "The Village",
+    "county": "Oklahoma",
+    "population": 9337
+  },
+  {
+    "id": "thomas",
+    "name": "Thomas",
+    "county": "Custer",
+    "population": 1138
+  },
+  {
+    "id": "tipton",
+    "name": "Tipton",
+    "county": "Tillman",
+    "population": 832
+  },
+  {
+    "id": "tishomingo",
+    "name": "Tishomingo",
+    "county": "Johnston",
+    "population": 3083
+  },
+  {
+    "id": "tonkawa",
+    "name": "Tonkawa",
+    "county": "Kay",
+    "population": 2988
+  },
+  {
+    "id": "tribbey",
+    "name": "Tribbey",
+    "county": "Pottawatomie",
+    "population": 346
+  },
+  {
+    "id": "tryon",
+    "name": "Tryon",
+    "county": "Lincoln",
+    "population": 395
+  },
+  {
+    "id": "tullahassee",
+    "name": "Tullahassee",
+    "county": "Wagoner",
+    "population": 112
+  },
+  {
+    "id": "tulsa",
+    "name": "Tulsa",
+    "county": "Tulsa",
+    "population": 415154
+  },
+  {
+    "id": "tupelo",
+    "name": "Tupelo",
+    "county": "Coal",
+    "population": 332
+  },
+  {
+    "id": "tushka",
+    "name": "Tushka",
+    "county": "Atoka",
+    "population": 427
+  },
+  {
+    "id": "tuttle",
+    "name": "Tuttle",
+    "county": "Grady",
+    "population": 8584
+  },
+  {
+    "id": "tyrone",
+    "name": "Tyrone",
+    "county": "Texas",
+    "population": 735
+  },
+  {
+    "id": "union-city",
+    "name": "Union City",
+    "county": "Canadian",
+    "population": 2075
+  },
+  {
+    "id": "valley-brook",
+    "name": "Valley Brook",
+    "county": "Oklahoma",
+    "population": 644
+  },
+  {
+    "id": "valley-park",
+    "name": "Valley Park",
+    "county": "Rogers",
+    "population": 22
+  },
+  {
+    "id": "valliant",
+    "name": "Valliant",
+    "county": "McCurtain",
+    "population": 805
+  },
+  {
+    "id": "velma",
+    "name": "Velma",
+    "county": "Stephens",
+    "population": 574
+  },
+  {
+    "id": "vera",
+    "name": "Vera",
+    "county": "Washington",
+    "population": 336
+  },
+  {
+    "id": "verden",
+    "name": "Verden",
+    "county": "Grady",
+    "population": 515
+  },
+  {
+    "id": "verdigris",
+    "name": "Verdigris",
+    "county": "Rogers",
+    "population": 5775
+  },
+  {
+    "id": "vernon",
+    "name": "Vernon",
+    "county": "McIntosh",
+    "population": 46
+  },
+  {
+    "id": "vian",
+    "name": "Vian",
+    "county": "Sequoyah",
+    "population": 1386
+  },
+  {
+    "id": "vici",
+    "name": "Vici",
+    "county": "Dewey",
+    "population": 583
+  },
+  {
+    "id": "vinita",
+    "name": "Vinita",
+    "county": "Craig",
+    "population": 5395
+  },
+  {
+    "id": "wagoner",
+    "name": "Wagoner",
+    "county": "Wagoner",
+    "population": 8387
+  },
+  {
+    "id": "wainwright",
+    "name": "Wainwright",
+    "county": "Muskogee",
+    "population": 96
+  },
+  {
+    "id": "wakita",
+    "name": "Wakita",
+    "county": "Grant",
+    "population": 308
+  },
+  {
+    "id": "walters",
+    "name": "Walters",
+    "county": "Cotton",
+    "population": 2384
+  },
+  {
+    "id": "wanette",
+    "name": "Wanette",
+    "county": "Pottawatomie",
+    "population": 311
+  },
+  {
+    "id": "wann",
+    "name": "Wann",
+    "county": "Nowata",
+    "population": 97
+  },
+  {
+    "id": "wapanucka",
+    "name": "Wapanucka",
+    "county": "Johnston",
+    "population": 390
+  },
+  {
+    "id": "warner",
+    "name": "Warner",
+    "county": "Muskogee",
+    "population": 1609
+  },
+  {
+    "id": "warr-acres",
+    "name": "Warr Acres",
+    "county": "Oklahoma",
+    "population": 10456
+  },
+  {
+    "id": "warwick",
+    "name": "Warwick",
+    "county": "Lincoln",
+    "population": 177
+  },
+  {
+    "id": "washington",
+    "name": "Washington",
+    "county": "McClain",
+    "population": 767
+  },
+  {
+    "id": "watonga",
+    "name": "Watonga",
+    "county": "Blaine",
+    "population": 2617
+  },
+  {
+    "id": "watts",
+    "name": "Watts",
+    "county": "Adair",
+    "population": 277
+  },
+  {
+    "id": "waukomis",
+    "name": "Waukomis",
+    "county": "Garfield",
+    "population": 1325
+  },
+  {
+    "id": "waurika",
+    "name": "Waurika",
+    "county": "Jefferson",
+    "population": 1842
+  },
+  {
+    "id": "wayne",
+    "name": "Wayne",
+    "county": "McClain",
+    "population": 670
+  },
+  {
+    "id": "waynoka",
+    "name": "Waynoka",
+    "county": "Woods",
+    "population": 703
+  },
+  {
+    "id": "weatherford",
+    "name": "Weatherford",
+    "county": "Custer",
+    "population": 12047
+  },
+  {
+    "id": "webb-city",
+    "name": "Webb City",
+    "county": "Osage",
+    "population": 61
+  },
+  {
+    "id": "webbers-falls",
+    "name": "Webbers Falls",
+    "county": "Muskogee",
+    "population": 340
+  },
+  {
+    "id": "welch",
+    "name": "Welch",
+    "county": "Craig",
+    "population": 638
+  },
+  {
+    "id": "weleetka",
+    "name": "Weleetka",
+    "county": "Okfuskee",
+    "population": 806
+  },
+  {
+    "id": "wellston",
+    "name": "Wellston",
+    "county": "Lincoln",
+    "population": 711
+  },
+  {
+    "id": "west-siloam-springs",
+    "name": "West Siloam Springs",
+    "county": "Delaware",
+    "population": 1068
+  },
+  {
+    "id": "westport",
+    "name": "Westport",
+    "county": "Pawnee",
+    "population": 459
+  },
+  {
+    "id": "westville",
+    "name": "Westville",
+    "county": "Adair",
+    "population": 1420
+  },
+  {
+    "id": "wetumka",
+    "name": "Wetumka",
+    "county": "Hughes",
+    "population": 1127
+  },
+  {
+    "id": "wewoka",
+    "name": "Wewoka",
+    "county": "Seminole",
+    "population": 3047
+  },
+  {
+    "id": "whitefield",
+    "name": "Whitefield",
+    "county": "Haskell",
+    "population": 380
+  },
+  {
+    "id": "wilburton",
+    "name": "Wilburton",
+    "county": "Latimer",
+    "population": 2280
+  },
+  {
+    "id": "willow",
+    "name": "Willow",
+    "county": "Greer",
+    "population": 116
+  },
+  {
+    "id": "wilson",
+    "name": "Wilson",
+    "county": "Carter",
+    "population": 1445
+  },
+  {
+    "id": "winchester",
+    "name": "Winchester",
+    "county": "Okmulgee",
+    "population": 554
+  },
+  {
+    "id": "wister",
+    "name": "Wister",
+    "county": "LeFlore",
+    "population": 1061
+  },
+  {
+    "id": "woodlawn-park",
+    "name": "Woodlawn Park",
+    "county": "Oklahoma",
+    "population": 154
+  },
+  {
+    "id": "woodward",
+    "name": "Woodward",
+    "county": "Woodward",
+    "population": 11750
+  },
+  {
+    "id": "wright-city",
+    "name": "Wright City",
+    "county": "McCurtain",
+    "population": 602
+  },
+  {
+    "id": "wyandotte",
+    "name": "Wyandotte",
+    "county": "Ottawa",
+    "population": 495
+  },
+  {
+    "id": "wynnewood",
+    "name": "Wynnewood",
+    "county": "Garvin",
+    "population": 1944
+  },
+  {
+    "id": "wynona",
+    "name": "Wynona",
+    "county": "Osage",
+    "population": 383
+  },
+  {
+    "id": "yale",
+    "name": "Yale",
+    "county": "Payne",
+    "population": 1075
+  },
+  {
+    "id": "yeager",
+    "name": "Yeager",
+    "county": "Hughes",
+    "population": 50
+  },
+  {
+    "id": "yukon",
+    "name": "Yukon",
+    "county": "Canadian",
+    "population": 27068
+  }
+]
