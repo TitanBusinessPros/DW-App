@@ -8,10 +8,12 @@ left as-is — renaming either is an infra change, not just a label swap.)
 
 ## Status
 
-🚧 In development, not live. Working so far: Firebase backend fully provisioned, a
-public landing page, and a working sign-up/login flow (email+password and Google) with
-Firestore profiles gated by an Oklahoma-town allowlist. Browsing walkers, messaging,
-and bookings/payments aren't built yet.
+🚧 In development, live at https://dw-app-2beee.web.app. Working so far: Firebase
+backend fully provisioned, a public landing page, a working sign-up/login flow
+(email+password and Google) with Firestore profiles gated by an Oklahoma-town
+allowlist, and an admin portal (`/admin.html`, email-allowlist + PIN-gated) to
+approve/reject pending sign-ups. Browsing walkers, messaging, and bookings/payments
+aren't built yet.
 
 See `docs/ARCHITECTURE.md` for the full data model and every product/architecture
 decision made so far (payment model, town caps, etc).
@@ -28,7 +30,7 @@ decision made so far (payment model, town caps, etc).
 - [x] Firebase project provisioned (Auth, Firestore, Storage, Messaging, Blaze)
 - [x] Landing page
 - [x] Sign-up / login (email+password + Google), town-gated to Oklahoma
-- [ ] Admin approval flow
+- [x] Admin approval flow (email allowlist + PIN-gated portal)
 - [ ] Browse/search walkers
 - [ ] In-app messaging
 - [ ] Booking flow + Stripe Connect payments

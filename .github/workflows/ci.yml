@@ -30,9 +30,19 @@ jobs:
         working-directory: testing
         run: npm install
 
+      - name: Install functions dependencies
+        working-directory: functions
+        run: npm install
+
       - name: Install Playwright browsers
         working-directory: testing
         run: npx playwright install --with-deps chromium
+
+      # Fixed, non-secret placeholder — never the real production ADMIN_PIN
+      # (that only ever lives in Secret Manager, set by hand — see
+      # docs/ARCHITECTURE.md). Matches testing/functions/run-admin-pin-tests.js.
+      - name: Write local test secret for the functions emulator
+        run: echo "ADMIN_PIN=00000000-local-test-only" > functions/.secret.local
 
       - name: Firestore & Storage rules tests
         working-directory: testing
@@ -42,9 +52,16 @@ jobs:
             --only firestore \
             "npm run test:rules"
 
+      - name: verifyAdminPin Cloud Function tests
+        run: |
+          firebase emulators:exec \
+            --project dw-app-2beee \
+            --only auth,firestore,functions \
+            "node testing/functions/run-admin-pin-tests.js"
+
       - name: End-to-end tests (Playwright, against emulators)
         run: |
           firebase emulators:exec \
             --project dw-app-2beee \
-            --only firestore,hosting,auth,storage \
+            --only firestore,hosting,auth,storage,functions \
             "npm --prefix testing test"
