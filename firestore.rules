@@ -40,6 +40,16 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
+    // towns/{townId} — the Oklahoma-only allowlist + per-town walker cap.
+    // Public read (needed on the signup page before anyone has an account
+    // at all); only an admin can add/edit towns or move the cap.
+    // ---------------------------------------------------------------------
+    match /towns/{townId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------------
     // users/{uid} — core identity for both owners and walkers.
     // ---------------------------------------------------------------------
     match /users/{uid} {
@@ -48,7 +58,10 @@ service cloud.firestore {
 
       allow create: if isOwnerUid(uid)
                     && request.resource.data.approved == false
-                    && request.resource.data.everApproved == false;
+                    && request.resource.data.everApproved == false
+                    && request.resource.data.role in ['owner', 'walker', 'both']
+                    && request.resource.data.townId is string
+                    && exists(/databases/$(database)/documents/towns/$(request.resource.data.townId));
 
       allow update: if isAdmin()
                     // Profile edits (name/photo/bio/role/location) — self-service,

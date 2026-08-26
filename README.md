@@ -1,36 +1,61 @@
-# Dog Walker
+# Wooflahoma Walks
 
-A dog walking / pet-care booking app (Rover-style) — profiles, messaging, and bookings, built on Firebase.
+A dog walking marketplace (Rover-style) for Oklahoma — dog owners browse and message
+local, independent walkers, then book and pay for a walk. Built on Firebase.
+
+(Repo name `DW-App` / Firebase project `dw-app-2beee` predate the product name and are
+left as-is — renaming either is an infra change, not just a label swap.)
 
 ## Status
 
-🚧 Early scaffolding. Reusing components/patterns from an existing social media platform codebase (auth, messaging, profiles) where it fits.
+🚧 In development, not live. Working so far: Firebase backend fully provisioned, a
+public landing page, and a working sign-up/login flow (email+password and Google) with
+Firestore profiles gated by an Oklahoma-town allowlist. Browsing walkers, messaging,
+and bookings/payments aren't built yet.
 
-## Planned architecture
+See `docs/ARCHITECTURE.md` for the full data model and every product/architecture
+decision made so far (payment model, town caps, etc).
 
-- **Backend:** Firebase (Auth, Firestore, Storage, Cloud Functions, Cloud Messaging for push)
-- **Frontend:** TBD — depends on the stack of the social platform code we're porting from
-- **CI/CD:** GitHub Actions — lint, test, build on every PR; branch protection on `main`
+## Stack
 
-## Core features (v1)
+- **Backend:** Firebase — Auth, Firestore, Storage, Cloud Functions, Cloud Messaging, Stripe Connect (planned)
+- **Frontend:** Plain HTML/CSS/JS, no build step, no framework — served from `/public`
+- **CI/CD:** GitHub Actions — Firestore rules tests + Playwright e2e tests against local
+  emulators on every PR; `main` is branch-protected (PR + passing CI required, auto-merges once green)
 
-- [ ] User profiles (owners + walkers)
-- [ ] Search/browse walkers
-- [ ] Booking flow (request, accept/decline, schedule)
+## Core features
+
+- [x] Firebase project provisioned (Auth, Firestore, Storage, Messaging, Blaze)
+- [x] Landing page
+- [x] Sign-up / login (email+password + Google), town-gated to Oklahoma
+- [ ] Admin approval flow
+- [ ] Browse/search walkers
 - [ ] In-app messaging
+- [ ] Booking flow + Stripe Connect payments
 - [ ] Reviews/ratings
 - [ ] Push notifications
 
-## Repo layout (proposed)
+## Repo layout
 
 ```
-/docs         — planning notes, architecture decisions
-/src          — application source
-/public       — static assets
+/docs         — architecture & decision log
+/public       — the actual app (static HTML/CSS/JS, Firebase Hosting root)
 /functions    — Firebase Cloud Functions
-/.github/workflows — CI pipelines
+/testing      — Playwright e2e tests + Firestore rules unit tests
+/.github/workflows — CI pipeline
 ```
 
 ## Local dev
 
-_Setup instructions go here once the stack is finalized._
+```
+firebase emulators:start --project dw-app-2beee
+```
+Serves the app at http://127.0.0.1:5000 against local emulators (never production).
+
+To run the test suite the same way CI does:
+```
+cd testing && npm install && npx playwright install --with-deps chromium
+cd ..
+firebase emulators:exec --project dw-app-2beee --only firestore,hosting,auth,storage "npm --prefix testing test"
+firebase emulators:exec --project dog-walker-rules-test --only firestore "npm run test:rules --prefix testing"
+```

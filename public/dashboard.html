@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Wooflahoma Walks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="dev-banner">🚧 In development — this is a placeholder dashboard. Browsing walkers, messaging, and bookings aren't built yet.</div>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-badge">🐾</span>
+      <span class="logo-text">Wooflahoma Walks</span>
+    </a>
+    <div class="header-actions">
+      <button id="logoutBtn" class="btn btn-ghost">Log out</button>
+    </div>
+  </div>
+</header>
+
+<main class="auth-page">
+  <div class="auth-card" style="max-width: 560px;" id="dashboardCard">
+    <p>Loading your profile…</p>
+  </div>
+</main>
+
+<script type="module">
+  import { auth, db, onAuthStateChanged, signOut, doc, getDoc } from "./firebase-init.js";
+
+  const card = document.getElementById("dashboardCard");
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      location.href = "login.html";
+      return;
+    }
+
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (!snap.exists()) {
+      card.innerHTML = `<h1>Welcome!</h1><p>We couldn't find a profile for your account yet. Try signing up again.</p>`;
+      return;
+    }
+
+    const profile = snap.data();
+    const statusBadge = profile.approved
+      ? `<span class="status-badge status-badge--approved">✅ Approved</span>`
+      : `<span class="status-badge status-badge--pending">⏳ Pending review</span>`;
+
+    const roleLabel = { owner: "Dog Owner", walker: "Dog Walker", both: "Dog Owner & Walker" }[profile.role] || profile.role;
+
+    card.innerHTML = `
+      <h1>Hey, ${profile.displayName || user.email}! 👋</h1>
+      <p class="auth-subtitle">${roleLabel}</p>
+      <div style="text-align:center; margin-bottom: 24px;">${statusBadge}</div>
+      <p style="text-align:center;">
+        ${profile.approved
+          ? "Your profile is approved! Browsing walkers and booking isn't built yet, but it's next."
+          : "Your profile is waiting on admin review. We'll notify you once it's approved — this app doesn't auto-approve yet."}
+      </p>
+    `;
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await signOut(auth);
+    location.href = "index.html";
+  });
+</script>
+
+</body>
+</html>

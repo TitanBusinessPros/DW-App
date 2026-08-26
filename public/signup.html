@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — Wooflahoma Walks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-badge">🐾</span>
+      <span class="logo-text">Wooflahoma Walks</span>
+    </a>
+  </div>
+</header>
+
+<main class="auth-page">
+  <div class="auth-card">
+    <h1>Create your account</h1>
+    <p class="auth-subtitle">Oklahoma only, for now — every town on the list below is one we serve.</p>
+
+    <div id="formError" class="form-error"></div>
+
+    <form id="signupForm">
+      <div class="form-group">
+        <label for="displayName">Your name</label>
+        <input type="text" id="displayName" required autocomplete="name">
+      </div>
+
+      <div class="form-group">
+        <label for="townId">Your town</label>
+        <select id="townId" required>
+          <option value="" disabled selected>Loading towns…</option>
+        </select>
+        <p class="form-hint">Don't see your town? We're adding Oklahoma towns one at a time — check back soon.</p>
+      </div>
+
+      <div class="form-group">
+        <label>I'm signing up as a…</label>
+        <div class="role-options">
+          <label class="role-option">
+            <input type="radio" name="role" value="owner" checked>
+            <span>🐶 Dog Owner</span>
+          </label>
+          <label class="role-option">
+            <input type="radio" name="role" value="walker">
+            <span>🚶 Dog Walker</span>
+          </label>
+          <label class="role-option">
+            <input type="radio" name="role" value="both">
+            <span>🐾 Both</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required minlength="6" autocomplete="new-password">
+        <p class="form-hint">At least 6 characters.</p>
+      </div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="agreeTerms" required>
+        <span>I agree to the Terms of Service and confirm I live in Oklahoma.</span>
+      </label>
+
+      <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Create Account</button>
+    </form>
+
+    <div class="divider">or</div>
+
+    <button id="googleBtn" class="btn btn-google btn-block">
+      <span>🔵</span> Continue with Google
+    </button>
+
+    <p class="auth-footer-link">Already have an account? <a href="login.html">Log in</a></p>
+  </div>
+</main>
+
+<script type="module">
+  import {
+    auth, db,
+    onAuthStateChanged, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider,
+    doc, setDoc, getDoc, collection, getDocs, query, orderBy, serverTimestamp,
+  } from "./firebase-init.js";
+
+  const params = new URLSearchParams(location.search);
+  const preselectRole = params.get("role");
+  if (preselectRole) {
+    const radio = document.querySelector(`input[name="role"][value="${preselectRole}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  const errorBox = document.getElementById("formError");
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.add("visible");
+  }
+  function clearError() {
+    errorBox.classList.remove("visible");
+  }
+
+  // Populate the town dropdown from Firestore. This is the actual
+  // Oklahoma-only enforcement mechanism — see docs/ARCHITECTURE.md.
+  const townSelect = document.getElementById("townId");
+  async function loadTowns() {
+    try {
+      const snap = await getDocs(query(collection(db, "towns"), orderBy("name")));
+      townSelect.innerHTML = "";
+      if (snap.empty) {
+        townSelect.innerHTML = `<option value="" disabled selected>No towns available yet</option>`;
+        return;
+      }
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      placeholder.textContent = "Select your town";
+      townSelect.appendChild(placeholder);
+      snap.forEach((d) => {
+        const opt = document.createElement("option");
+        opt.value = d.id;
+        opt.textContent = d.data().name;
+        townSelect.appendChild(opt);
+      });
+    } catch (err) {
+      townSelect.innerHTML = `<option value="" disabled selected>Couldn't load towns</option>`;
+      console.error(err);
+    }
+  }
+  loadTowns();
+
+  async function createProfileDoc(uid) {
+    const existing = await getDoc(doc(db, "users", uid));
+    if (existing.exists()) return; // already has a profile — don't clobber it
+    const role = document.querySelector('input[name="role"]:checked').value;
+    const townId = townSelect.value;
+    await setDoc(doc(db, "users", uid), {
+      displayName: document.getElementById("displayName").value.trim(),
+      role,
+      townId,
+      approved: false,
+      everApproved: false,
+      agreedToTerms: true,
+      agreedToTermsAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      lastActiveAt: serverTimestamp(),
+    });
+  }
+
+  function validateBeforeSubmit() {
+    if (!townSelect.value) {
+      showError("Please select your town.");
+      return false;
+    }
+    if (!document.getElementById("agreeTerms").checked) {
+      showError("You need to agree to the terms to continue.");
+      return false;
+    }
+    return true;
+  }
+
+  document.getElementById("signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearError();
+    if (!validateBeforeSubmit()) return;
+
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creating account…";
+
+    try {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await createProfileDoc(cred.user.uid);
+      location.href = "dashboard.html";
+    } catch (err) {
+      showError(friendlyAuthError(err));
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create Account";
+    }
+  });
+
+  document.getElementById("googleBtn").addEventListener("click", async () => {
+    clearError();
+    if (!validateBeforeSubmit()) return;
+    try {
+      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+      await createProfileDoc(cred.user.uid);
+      location.href = "dashboard.html";
+    } catch (err) {
+      showError(friendlyAuthError(err));
+    }
+  });
+
+  function friendlyAuthError(err) {
+    const code = err?.code || "";
+    if (code.includes("email-already-in-use")) return "That email already has an account — try logging in instead.";
+    if (code.includes("weak-password")) return "That password is too weak — use at least 6 characters.";
+    if (code.includes("invalid-email")) return "That doesn't look like a valid email address.";
+    if (code.includes("popup-closed-by-user")) return "Google sign-in was closed before finishing.";
+    return "Something went wrong creating your account. Please try again.";
+  }
+
+  // If already logged in, skip straight to the dashboard. Unsubscribe after
+  // the first callback — onAuthStateChanged also fires when our OWN
+  // createUserWithEmailAndPassword/signInWithPopup calls below sign someone
+  // in, and redirecting then would race ahead of createProfileDoc() and
+  // navigate away before the profile doc is ever written.
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    unsubscribe();
+    if (user) location.href = "dashboard.html";
+  });
+</script>
+
+</body>
+</html>
