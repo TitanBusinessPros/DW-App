@@ -37,10 +37,14 @@ on top of them.
    for payouts to walkers, more complex). **v1 draft assumes the simpler listing-fee
    model** (`walkerProfiles.listingPaidUntil`, same as the source's `businessPaidUntil`)
    so we have something working end-to-end; per-booking payment/payout is a v2 item.
-2. ~~**Firebase project.** Not created yet~~ — **Resolved:** project is `dw-app-2beee`,
-   `.firebaserc` points at it. Still need a web app config (from Project Settings →
-   General → Add app → Web) for `public/` to actually initialize the SDK, and, for a
-   deploy-on-merge CI step, a service account key stored as a GitHub secret.
+2. ~~**Firebase project.** Not created yet~~ — **Resolved:** project is `dw-app-2beee`.
+   `.firebaserc` points at it; `public/firebase-init.js` has the web app config (a Web
+   app was registered via CLI — `apps:create WEB`) and `public/firebase-messaging-sw.js`
+   has the matching config + VAPID key for push. Still need: the project upgraded to
+   Blaze (confirmed still on the free plan — `functions:list` came back
+   `SERVICE_DISABLED` for Cloud Functions API), Email/Password + Google sign-in enabled
+   under Authentication, and, for a deploy-on-merge CI step, a service account key
+   stored as a GitHub secret.
 3. **"Both" role.** Can one account be both an owner and a walker (like Rover allows)?
    Assumed yes for now — `users.role` supports it.
 
