@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log In — Wooflahoma Walks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-badge">🐾</span>
+      <span class="logo-text">Wooflahoma Walks</span>
+    </a>
+  </div>
+</header>
+
+<main class="auth-page">
+  <div class="auth-card">
+    <h1>Welcome back</h1>
+    <p class="auth-subtitle">Log in to message walkers, manage bookings, and more.</p>
+
+    <div id="formError" class="form-error"></div>
+    <div id="formNotice" class="form-notice"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Log In</button>
+    </form>
+
+    <p class="auth-footer-link"><a href="#" id="forgotLink">Forgot your password?</a></p>
+
+    <div class="divider">or</div>
+
+    <button id="googleBtn" class="btn btn-google btn-block">
+      <span>🔵</span> Continue with Google
+    </button>
+
+    <p class="auth-footer-link">Don't have an account? <a href="signup.html">Sign up</a></p>
+  </div>
+</main>
+
+<script type="module">
+  import {
+    auth,
+    onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider,
+    sendPasswordResetEmail,
+  } from "./firebase-init.js";
+
+  const errorBox = document.getElementById("formError");
+  const noticeBox = document.getElementById("formNotice");
+  function showError(msg) {
+    noticeBox.classList.remove("visible");
+    errorBox.textContent = msg;
+    errorBox.classList.add("visible");
+  }
+  function showNotice(msg) {
+    errorBox.classList.remove("visible");
+    noticeBox.textContent = msg;
+    noticeBox.classList.add("visible");
+  }
+
+  function friendlyAuthError(err) {
+    const code = err?.code || "";
+    if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) {
+      return "That email/password combination doesn't match an account.";
+    }
+    if (code.includes("too-many-requests")) return "Too many attempts — please wait a bit and try again.";
+    if (code.includes("popup-closed-by-user")) return "Google sign-in was closed before finishing.";
+    return "Couldn't log you in. Please try again.";
+  }
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Logging in…";
+    try {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      await signInWithEmailAndPassword(auth, email, password);
+      location.href = "dashboard.html";
+    } catch (err) {
+      showError(friendlyAuthError(err));
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Log In";
+    }
+  });
+
+  document.getElementById("googleBtn").addEventListener("click", async () => {
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      location.href = "dashboard.html";
+    } catch (err) {
+      showError(friendlyAuthError(err));
+    }
+  });
+
+  document.getElementById("forgotLink").addEventListener("click", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    if (!email) {
+      showError("Enter your email above first, then click “Forgot your password?” again.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showNotice(`Password reset email sent to ${email} — check your inbox.`);
+    } catch (err) {
+      showError("Couldn't send a reset email for that address.");
+    }
+  });
+
+  // Already logged in? Skip straight to the dashboard. Unsubscribe after the
+  // first callback so this doesn't also fire (and race) when our own
+  // signInWithEmailAndPassword/signInWithPopup calls below sign someone in.
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    unsubscribe();
+    if (user) location.href = "dashboard.html";
+  });
+</script>
+
+</body>
+</html>

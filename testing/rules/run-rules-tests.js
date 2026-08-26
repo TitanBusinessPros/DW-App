@@ -1,6 +1,5 @@
 // Firestore security rules unit tests — run against the Firestore emulator.
 // Expand alongside firestore.rules as new collections/branches are added.
-const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const {
@@ -20,6 +19,17 @@ async function main() {
     },
   });
 
+  // Seed a town, bypassing rules — this is data setup, not something
+  // exercised by rules themselves (that's covered by the towns/{townId}
+  // read/write tests below).
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await context
+      .firestore()
+      .collection("towns")
+      .doc("pauls-valley")
+      .set({ name: "Pauls Valley", walkerCap: 50, approvedWalkerCount: 0 });
+  });
+
   try {
     // An unapproved, unauthenticated client can't read anyone's profile.
     {
@@ -27,7 +37,23 @@ async function main() {
       await assertFails(db.collection("users").doc("someone").get());
     }
 
-    // A signed-in user can create their own (not-yet-approved) profile.
+    // Anyone — even signed out — can read the town list (needed on the
+    // signup page before an account exists).
+    {
+      const db = testEnv.unauthenticatedContext().firestore();
+      await assertSucceeds(db.collection("towns").doc("pauls-valley").get());
+    }
+
+    // A random signed-in user can't write to towns — admin-only.
+    {
+      const db = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(
+        db.collection("towns").doc("new-town").set({ name: "New Town", walkerCap: 10 })
+      );
+    }
+
+    // A signed-in user can create their own (not-yet-approved) profile,
+    // referencing a real town.
     {
       const db = testEnv.authenticatedContext("alice").firestore();
       await assertSucceeds(
@@ -35,6 +61,7 @@ async function main() {
           approved: false,
           everApproved: false,
           role: "owner",
+          townId: "pauls-valley",
         })
       );
     }
@@ -47,6 +74,34 @@ async function main() {
           approved: false,
           everApproved: false,
           role: "owner",
+          townId: "pauls-valley",
+        })
+      );
+    }
+
+    // A profile can't reference a town that doesn't exist — this is the
+    // actual mechanism that keeps the app Oklahoma-only (see docs/ARCHITECTURE.md).
+    {
+      const db = testEnv.authenticatedContext("carol").firestore();
+      await assertFails(
+        db.collection("users").doc("carol").set({
+          approved: false,
+          everApproved: false,
+          role: "owner",
+          townId: "some-town-in-texas",
+        })
+      );
+    }
+
+    // An invalid role is rejected too.
+    {
+      const db = testEnv.authenticatedContext("dave").firestore();
+      await assertFails(
+        db.collection("users").doc("dave").set({
+          approved: false,
+          everApproved: false,
+          role: "admin", // not a real role
+          townId: "pauls-valley",
         })
       );
     }

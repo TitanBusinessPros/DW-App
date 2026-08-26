@@ -45,6 +45,6 @@ jobs:
       - name: End-to-end tests (Playwright, against emulators)
         run: |
           firebase emulators:exec \
-            --project dog-walker-e2e-test \
+            --project dw-app-2beee \
             --only firestore,hosting,auth,storage \
             "npm --prefix testing test"

@@ -17,6 +17,10 @@ ui-debug.log
 .env.*.local
 serviceAccountKey.json
 
+# Playwright
+testing/test-results/
+testing/playwright-report/
+
 # Editor/OS
 .vscode/
 .idea/
