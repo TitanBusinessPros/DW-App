@@ -81,6 +81,26 @@ async function main() {
     }
   }
 
+  // 5. Lockout: 5 wrong attempts from a fresh uid locks it out, and even
+  // the CORRECT PIN is then rejected until the lockout window passes.
+  {
+    const token = await getIdToken("lockout-uid", "lockout-admin@example.com");
+    await db.collection("admins").doc("lockout-admin@example.com").set({});
+
+    for (let i = 0; i < 5; i++) {
+      const { status } = await callFn(token, "wrong-pin-" + i);
+      if (status === 200) throw new Error(`expected attempt ${i + 1} (wrong PIN) to fail`);
+    }
+
+    const { status, body } = await callFn(token, TEST_PIN); // correct PIN, but locked out
+    if (status === 200) {
+      throw new Error("expected the 6th attempt to be locked out even with the correct PIN");
+    }
+    if (!body.error || !/too many attempts/i.test(body.error.message || "")) {
+      throw new Error("expected a lockout error message, got: " + JSON.stringify(body));
+    }
+  }
+
   console.log("✓ verifyAdminPin tests passed");
 }
 

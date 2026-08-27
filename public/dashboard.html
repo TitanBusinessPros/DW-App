@@ -47,7 +47,7 @@
     // allowed by rules for exactly this purpose.
     const adminSnap = user.email ? await getDoc(doc(db, "admins", user.email)) : null;
     const adminLink = adminSnap && adminSnap.exists()
-      ? `<p style="text-align:center; margin-top: 8px;"><a href="admin.html">Admin portal →</a></p>`
+      ? `<p style="text-align:center; margin-top: 8px;"><a href="index.html#admin">Admin portal →</a></p>`
       : "";
 
     const snap = await getDoc(doc(db, "users", user.uid));

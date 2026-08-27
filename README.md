@@ -11,9 +11,9 @@ left as-is — renaming either is an infra change, not just a label swap.)
 🚧 In development, live at https://dw-app-2beee.web.app. Working so far: Firebase
 backend fully provisioned, a public landing page, a working sign-up/login flow
 (email+password and Google) with Firestore profiles gated by an Oklahoma-town
-allowlist, and an admin portal (`/admin.html`, email-allowlist + PIN-gated) to
-approve/reject pending sign-ups. Browsing walkers, messaging, and bookings/payments
-aren't built yet.
+allowlist, and an admin panel (hidden section on the main page, opened via the
+footer "Admin" link — email-allowlist + PIN-gated) to approve/reject pending
+sign-ups. Browsing walkers, messaging, and bookings/payments aren't built yet.
 
 See `docs/ARCHITECTURE.md` for the full data model and every product/architecture
 decision made so far (payment model, town caps, etc).

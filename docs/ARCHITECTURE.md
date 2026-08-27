@@ -128,8 +128,13 @@ Stripe dashboard.
 
 ## Admin portal & approval flow
 
-**Added 2026-08-26.** `public/admin.html` — the only way any `users/{uid}` doc
-moves out of `approved: false`. Two layers, both required:
+**Added 2026-08-26, moved into `index.html` same day** — the only way any
+`users/{uid}` doc moves out of `approved: false`. Deliberately NOT a separate
+page/route: it's a hidden `#adminPanel` section on the landing page
+(`public/index.html`), revealed by the footer "Admin" link or a `#admin` URL
+fragment (same document, no navigation) — first built as a standalone
+`admin.html`, then folded in per your instruction that admin access live
+natively on the main page. Two layers, both required:
 
 1. **Email allowlist** — `admins/{email}` docs, added by hand in the Firebase
    console (Firestore write is `if false` for everyone, including admins
