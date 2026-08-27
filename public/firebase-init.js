@@ -50,11 +50,6 @@ import {
   getMessaging,
   isSupported as isMessagingSupported,
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js";
-import {
-  getFunctions,
-  connectFunctionsEmulator,
-  httpsCallable,
-} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-functions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCAXlbDG9HupA9njhcH0-_yWNtFFgugQO4",
@@ -77,7 +72,6 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-export const functions = getFunctions(app);
 
 const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
@@ -85,7 +79,26 @@ if (isLocal) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   connectStorageEmulator(storage, "127.0.0.1", 9199);
-  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+}
+
+// verifyAdminPin is a plain HTTPS function (not a Firebase callable — see
+// functions/index.js for why), so it's called with a normal fetch rather
+// than the Functions SDK/emulator connection.
+const VERIFY_ADMIN_PIN_URL = isLocal
+  ? "http://127.0.0.1:5001/dw-app-2beee/us-central1/verifyAdminPin"
+  : "https://us-central1-dw-app-2beee.cloudfunctions.net/verifyAdminPin";
+
+export async function callVerifyAdminPin(pin) {
+  if (!auth.currentUser) throw new Error("Sign in first.");
+  const idToken = await auth.currentUser.getIdToken();
+  const res = await fetch(VERIFY_ADMIN_PIN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ pin }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || "Incorrect code.");
+  return body;
 }
 
 // Messaging needs a real HTTPS origin (or localhost) and browser support —
@@ -125,5 +138,4 @@ export {
   ref,
   uploadBytes,
   getDownloadURL,
-  httpsCallable,
 };
