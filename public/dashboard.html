@@ -48,6 +48,18 @@
 
   const card = document.getElementById("dashboardCard");
 
+  // Anything awaited on this page (Firestore reads) goes through this so a
+  // stalled network/emulator/rules-permission-check can never leave the UI
+  // stuck on "Loading your profile…" forever — it always resolves to
+  // either real data or a visible error within LOAD_TIMEOUT_MS.
+  const LOAD_TIMEOUT_MS = 10000;
+  function withTimeout(promise, message) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(message)), LOAD_TIMEOUT_MS)),
+    ]);
+  }
+
   // onAuthStateChanged can fire more than once for the same sign-in (e.g. a
   // token refresh). Without this guard, a second firing mid-PIN-entry
   // would call mountAdminSection() again, appending a second, independent
@@ -63,36 +75,50 @@
     if (user.uid === lastHandledUid) return;
     lastHandledUid = user.uid;
 
-    const snap = await getDoc(doc(db, "users", user.uid));
-    if (!snap.exists()) {
-      card.innerHTML = `<h1>Welcome!</h1><p>We couldn't find a profile for your account yet. Try signing up again.</p>`;
-    } else {
-      const profile = snap.data();
-      const statusBadge = profile.approved
-        ? `<span class="status-badge status-badge--approved">✅ Approved</span>`
-        : `<span class="status-badge status-badge--pending">⏳ Pending review</span>`;
-      const roleLabel = { owner: "Dog Owner", walker: "Dog Walker", both: "Dog Owner & Walker" }[profile.role] || profile.role;
+    try {
+      const snap = await withTimeout(getDoc(doc(db, "users", user.uid)), "Loading your profile timed out.");
+      if (!snap.exists()) {
+        card.innerHTML = `<h1>Welcome!</h1><p>We couldn't find a profile for your account yet. Try signing up again.</p>`;
+      } else {
+        const profile = snap.data();
+        const statusBadge = profile.approved
+          ? `<span class="status-badge status-badge--approved">✅ Approved</span>`
+          : `<span class="status-badge status-badge--pending">⏳ Pending review</span>`;
+        const roleLabel = { owner: "Dog Owner", walker: "Dog Walker", both: "Dog Owner & Walker" }[profile.role] || profile.role;
 
+        card.innerHTML = `
+          <h1>Hey, ${profile.displayName || user.email}! 👋</h1>
+          <p class="auth-subtitle">${roleLabel}</p>
+          <div style="text-align:center; margin-bottom: 24px;">${statusBadge}</div>
+          <p style="text-align:center;">
+            ${profile.approved
+              ? "Your profile is approved! Browsing walkers and booking isn't built yet, but it's next."
+              : "Your profile is waiting on admin review. We'll notify you once it's approved — this app doesn't auto-approve yet."}
+          </p>
+        `;
+      }
+    } catch (err) {
+      console.error("Failed to load profile:", err);
       card.innerHTML = `
-        <h1>Hey, ${profile.displayName || user.email}! 👋</h1>
-        <p class="auth-subtitle">${roleLabel}</p>
-        <div style="text-align:center; margin-bottom: 24px;">${statusBadge}</div>
-        <p style="text-align:center;">
-          ${profile.approved
-            ? "Your profile is approved! Browsing walkers and booking isn't built yet, but it's next."
-            : "Your profile is waiting on admin review. We'll notify you once it's approved — this app doesn't auto-approve yet."}
-        </p>
+        <h1>Something went wrong</h1>
+        <p>We couldn't load your profile (${err.message || "unknown error"}). Try refreshing the page.</p>
       `;
     }
 
     // Real auth check via Firestore rules (isSignedIn() && token.email ==
     // the doc id) — this is what actually decides whether the section
-    // below gets created at all, not anything client-side.
-    if (user.email) {
-      const adminSnap = await getDoc(doc(db, "admins", user.email));
-      if (adminSnap.exists()) {
-        mountAdminSection(user.uid);
+    // below gets created at all, not anything client-side. Guarded
+    // separately so a failure here can't affect the profile card above,
+    // which has already rendered by this point either way.
+    try {
+      if (user.email) {
+        const adminSnap = await withTimeout(getDoc(doc(db, "admins", user.email)), "Admin check timed out.");
+        if (adminSnap.exists()) {
+          mountAdminSection(user.uid);
+        }
       }
+    } catch (err) {
+      console.error("Admin allowlist check failed:", err);
     }
   });
 
