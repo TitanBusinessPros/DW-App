@@ -1,13 +1,17 @@
-// Regression coverage for the admin panel embedded in public/index.html —
-// see docs/ARCHITECTURE.md "Admin portal & approval flow". There's no
-// separate admin page/route: it's a hidden section on the landing page,
-// revealed via the #admin URL fragment (as used here) or the footer
-// "Admin" link. There's also no way to automate a real Google OAuth popup
-// here, so these tests sign in via signInWithCustomToken against the Auth
-// emulator instead (tokens minted by testing/emulator-seed.js's
-// globalSetup, written to .auth-tokens.json). The wrong-PIN/correct-PIN
-// cases exercise the real deployed-shaped verifyAdminPin Cloud Function
-// running in the emulator, not a mock.
+// Regression coverage for the admin panel — see docs/ARCHITECTURE.md
+// "Admin portal & approval flow". There is no public admin link/button
+// anywhere and no separate route: the whole section is created via
+// document.createElement inside public/dashboard.html's module script,
+// and ONLY once onAuthStateChanged reports a real signed-in user whose
+// email is on the admins/{email} allowlist — never present in the DOM
+// otherwise. These tests assert both halves of that: the section is
+// genuinely absent for everyone else, and it works end to end for a real
+// admin. There's no way to automate a real Google OAuth popup here, so
+// sign-in happens via signInWithCustomToken against the Auth emulator
+// instead (tokens minted by testing/emulator-seed.js's globalSetup,
+// written to .auth-tokens.json). The wrong-PIN/correct-PIN cases exercise
+// the real deployed-shaped verifyAdminPin Cloud Function running in the
+// emulator, not a mock.
 const { test, expect } = require("@playwright/test");
 const tokens = require("../.auth-tokens.json");
 
@@ -22,58 +26,61 @@ async function signInWithToken(page, token) {
   }, token);
 }
 
-test("a signed-in, non-allowlisted email is told it's not authorized", async ({ page }) => {
-  await page.goto("/#admin");
-  await expect(page.locator("#adminPanel")).toBeVisible();
-  await signInWithToken(page, tokens.nonAdminToken);
-  await expect(page.locator("#gateCard")).toContainText("isn't on the admin list");
-  // Never gets as far as being offered the PIN form.
-  await expect(page.locator("#pinForm")).toHaveCount(0);
+// Sign in on a neutral page first — dashboard.html redirects straight to
+// login.html on its very first (unauthenticated) auth-state firing, which
+// would otherwise navigate away before signInWithToken ever runs.
+async function signInThenGoToDashboard(page, token) {
+  await page.goto("/");
+  await signInWithToken(page, token);
+  await page.goto("/dashboard.html");
+}
+
+test("the landing page has no admin link, button, or hidden element anywhere", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#adminSection")).toHaveCount(0);
+  await expect(page.locator("text=Admin")).toHaveCount(0);
+});
+
+test("a logged-out visitor to dashboard.html gets no admin markup — it redirects before anything renders", async ({ page }) => {
+  await page.goto("/dashboard.html");
+  await page.waitForURL("**/login.html");
+  await expect(page.locator("#adminSection")).toHaveCount(0);
+});
+
+test("a signed-in, non-allowlisted user never gets the admin section created", async ({ page }) => {
+  await signInThenGoToDashboard(page, tokens.nonAdminToken);
+  await expect(page.locator(".status-badge, h1")).toBeVisible();
+  await expect(page.locator("#adminSection")).toHaveCount(0);
+});
+
+test("a signed-in, allowlisted admin gets the PIN gate automatically, no click required", async ({ page }) => {
+  await signInThenGoToDashboard(page, tokens.adminToken);
+  await expect(page.locator("#adminSection #pinForm")).toBeVisible();
 });
 
 test("an allowlisted admin entering the wrong PIN is rejected", async ({ page }) => {
-  await page.goto("/#admin");
-  await signInWithToken(page, tokens.adminToken);
-
+  await signInThenGoToDashboard(page, tokens.adminToken);
   await expect(page.locator("#pinForm")).toBeVisible();
   await page.fill("#pinInput", "definitely-not-the-pin");
   await page.click("#pinForm button[type=submit]");
 
-  await expect(page.locator("#pinError")).toContainText("Incorrect code");
-  // Still gated — the pending list never rendered.
+  // Generous timeout here specifically: this round-trips through the real
+  // verifyAdminPin Cloud Function in the emulator, which can be slow to
+  // respond when the whole emulator stack + browser are all competing for
+  // resources during a full test run.
+  await expect(page.locator("#pinError")).toContainText("Incorrect code", { timeout: 15000 });
   await expect(page.locator("#mainCard")).toBeHidden();
 });
 
-test("the correct PIN unlocks the portal, and approving a pending user removes it from the list", async ({ page }) => {
-  await page.goto("/#admin");
-  await signInWithToken(page, tokens.adminToken);
-
+test("the correct PIN unlocks the panel, and approving a pending user removes it from the list", async ({ page }) => {
+  await signInThenGoToDashboard(page, tokens.adminToken);
   await page.fill("#pinInput", TEST_PIN);
   await page.click("#pinForm button[type=submit]");
 
-  await expect(page.locator("#mainCard")).toBeVisible();
+  await expect(page.locator("#mainCard")).toBeVisible({ timeout: 15000 });
   const row = page.locator(`#row-${tokens.pendingUid}`);
   await expect(row).toContainText("Pending Test User");
 
   await row.locator("[data-approve]").click();
   await expect(row).toHaveCount(0);
-});
-
-test("the footer Admin link reveals the panel without navigating away", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator("#adminPanel")).toBeHidden();
-  await page.click("#adminTrigger");
-  await expect(page.locator("#adminPanel")).toBeVisible();
-  await expect(page).toHaveURL(/\/#admin$/); // same document, just a fragment — no new page
-});
-
-test("dashboard.html links back to the admin panel on the main page for an allowlisted email", async ({ page }) => {
-  // Sign in on a neutral page first — dashboard.html itself redirects
-  // straight to login.html on its very first (unauthenticated) auth-state
-  // firing, which would otherwise navigate away before signInWithToken
-  // ever runs.
-  await page.goto("/");
-  await signInWithToken(page, tokens.adminToken);
-  await page.goto("/dashboard.html");
-  await expect(page.locator('a[href="index.html#admin"]')).toBeVisible();
 });
