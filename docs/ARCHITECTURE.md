@@ -151,13 +151,27 @@ created for anyone else. Two layers, both required:
    signed in. (Which emails are on it isn't recorded here — this repo is
    public — see the Firestore console for the live list.)
 2. **PIN second factor** — after Google sign-in, an allowlisted email still
-   has to enter a PIN, verified server-side by the callable Cloud Function
+   has to enter a PIN, verified server-side by the Cloud Function
    `verifyAdminPin` (never compared client-side, so it's never sitting in
    page source). 5 wrong attempts locks that uid out for 15 minutes
    (`adminPinAttempts/{uid}`, Cloud-Function-only). Passing it just sets a
    `sessionStorage` flag for that tab — the actual data access is still
    governed by `isAdmin()` regardless of the PIN, which is a UX gate on top,
    not a second security boundary.
+   **`verifyAdminPin` is a plain `onRequest` HTTPS function, not a Firebase
+   callable (`onCall`)** — deliberately, and only after a production
+   incident: 2nd-gen callable functions on this project were never granted
+   public Cloud Run invoker access (every request was rejected with a raw,
+   infra-level 403 before ever reaching the function, so the PIN was never
+   actually being checked — see decision log). `invoker: "public"` in the
+   function's options is only wired up for `onRequest` in this
+   firebase-functions version (confirmed by reading the SDK source; it's a
+   silent no-op on `onCall` despite the type system accepting it there
+   too), so the function does its own CORS + ID-token verification
+   (`getAuth().verifyIdToken()`) instead of relying on the callable
+   protocol. The client calls it with a plain `fetch()` +
+   `Authorization: Bearer <ID token>` (`callVerifyAdminPin()` in
+   `public/firebase-init.js`) rather than `httpsCallable()`.
 3. Once in, an admin sees every `users/{uid}` with `approved == false` and can
    Approve (`approved: true, everApproved: true`) or Reject (`rejected: true`)
    with one click — plain client-side Firestore writes, allowed by the
@@ -190,6 +204,20 @@ not a live incident.
 6. ~~Town data seeding~~ — **Resolved 2026-08-26:** dropped the service-account-key
    bulk-seeder in favor of a static `ok-towns.json` + on-demand `towns/{townId}`
    self-registration. No more manual database seeding, ever, for towns.
+7. ~~verifyAdminPin unreachable in production~~ — **Resolved 2026-08-27.**
+   Real incident: every PIN attempt failed in production (not a wrong-PIN
+   error — a raw, infra-level 403, confirmed via `firebase functions:log`
+   and direct `curl` against both the `cloudfunctions.net` and Cloud Run
+   URLs) because the callable function never had public Cloud Run invoker
+   access. Root cause confirmed by reading `firebase-functions`' own
+   source: `invoker: "public"` only wires into the `onRequest` code path
+   in this SDK version, silently doing nothing for `onCall`. Fixed by
+   converting `verifyAdminPin` to a plain `onRequest` function (own
+   CORS + manual ID-token verification) instead of a callable — verified
+   with `curl` post-deploy (OPTIONS preflight → 204 with correct CORS
+   headers; unauthenticated POST → our own JSON `401`, not Google's
+   infra-level HTML 403). No Google Cloud Console step was needed once the
+   actual constraint (which trigger type the option applies to) was found.
 
 ## What was deliberately left out of this port
 

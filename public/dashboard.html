@@ -41,9 +41,9 @@
 
 <script type="module">
   import {
-    auth, db, functions,
+    auth, db,
     onAuthStateChanged, signOut, doc, getDoc, updateDoc,
-    collection, getDocs, query, where, serverTimestamp, httpsCallable,
+    collection, getDocs, query, where, serverTimestamp, callVerifyAdminPin,
   } from "./firebase-init.js";
 
   const card = document.getElementById("dashboardCard");
@@ -150,9 +150,8 @@
         submitBtn.disabled = true;
         submitBtn.textContent = "Checking…";
         try {
-          const verifyAdminPin = httpsCallable(functions, "verifyAdminPin");
           const pin = gateCard.querySelector("#pinInput").value.trim();
-          await verifyAdminPin({ pin });
+          await callVerifyAdminPin(pin);
           sessionStorage.setItem("adminPinVerified:" + uid, "1");
           await showPendingList();
         } catch (err) {
