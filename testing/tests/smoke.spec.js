@@ -5,6 +5,8 @@ const { test, expect } = require("@playwright/test");
 
 test("home page loads and shows the hero", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("h1")).toContainText("Adventure Awaits");
+  // Scoped to the hero specifically — index.html's hidden #adminPanel also
+  // has its own <h1>s (rendered but display:none until opened).
+  await expect(page.locator(".hero-copy h1")).toContainText("Adventure Awaits");
   await expect(page.locator(".search-bar input")).toBeVisible();
 });

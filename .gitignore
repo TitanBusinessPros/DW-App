@@ -21,6 +21,7 @@ functions/.secret.local
 # Playwright
 testing/test-results/
 testing/playwright-report/
+testing/.auth-tokens.json
 
 # Editor/OS
 .vscode/

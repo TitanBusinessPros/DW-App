@@ -19,6 +19,7 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithCustomToken,
   sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import {
@@ -104,6 +105,9 @@ export {
   signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  // Only ever used by tests, to simulate a signed-in user (e.g. an admin)
+  // against the Auth emulator without automating a real Google popup.
+  signInWithCustomToken,
   sendPasswordResetEmail,
   doc,
   setDoc,
