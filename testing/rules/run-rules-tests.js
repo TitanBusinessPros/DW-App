@@ -200,6 +200,68 @@ async function main() {
       );
     }
 
+    // --- conversations/messages + blocks -----------------------------------
+    // Seed two approved pairs directly (bypassing rules — only `approved`
+    // matters for isApproved()). One pair is named so ownerUid < walkerUid
+    // (conversationId already matches the sorted blocks pairId "by luck"),
+    // the other so ownerUid > walkerUid (conversationId does NOT match the
+    // sorted pairId) — this second case is what the exists(blocks/$(conversationId))
+    // bug missed, and what isBlockedPair() must catch instead.
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      for (const uid of ["amy", "bob", "zoe", "adam"]) {
+        await db.collection("users").doc(uid).set({ approved: true, everApproved: true });
+      }
+    });
+
+    // Sanity: an unblocked, approved pair can message each other.
+    {
+      const db = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(
+        db
+          .collection("conversations")
+          .doc("amy_bob")
+          .collection("messages")
+          .doc("m1")
+          .set({ senderId: "amy", text: "hi" })
+      );
+    }
+
+    // Blocked pair where conversationId ("amy_bob") already equals the sorted
+    // pairId ("amy_bob") — this direction passed even with the old buggy check.
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().collection("blocks").doc("amy_bob").set({});
+    });
+    {
+      const db = testEnv.authenticatedContext("amy").firestore();
+      await assertFails(
+        db
+          .collection("conversations")
+          .doc("amy_bob")
+          .collection("messages")
+          .doc("m2")
+          .set({ senderId: "amy", text: "should be blocked" })
+      );
+    }
+
+    // Blocked pair where conversationId ("zoe_adam") does NOT equal the sorted
+    // pairId ("adam_zoe") — this is the case the old exists(blocks/$(conversationId))
+    // check missed entirely, since it checked "zoe_adam" and found nothing.
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().collection("blocks").doc("adam_zoe").set({});
+    });
+    {
+      const db = testEnv.authenticatedContext("zoe").firestore();
+      await assertFails(
+        db
+          .collection("conversations")
+          .doc("zoe_adam")
+          .collection("messages")
+          .doc("m3")
+          .set({ senderId: "zoe", text: "should also be blocked" })
+      );
+    }
+
     console.log("✓ firestore.rules tests passed");
   } finally {
     await testEnv.cleanup();
