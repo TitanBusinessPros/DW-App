@@ -50,6 +50,12 @@ jobs:
       - name: Write local test secret for the functions emulator
         run: echo "ADMIN_PIN=00000000-local-test-only" > functions/.secret.local
 
+      # Fails fast (no emulator needed) if firestore.rules has a collection
+      # with no matching test under testing/rules/ — see that script's header
+      # comment for what it does and doesn't catch.
+      - name: Check every Firestore collection has a matching test
+        run: node testing/rules/check-rules-coverage.js
+
       - name: Firestore & Storage rules tests
         working-directory: testing
         run: |
