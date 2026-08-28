@@ -262,6 +262,83 @@ async function main() {
       );
     }
 
+    // --- walkerProfiles/{uid} -----------------------------------------------
+    {
+      const db = testEnv.authenticatedContext("frank").firestore();
+      await assertSucceeds(
+        db.collection("walkerProfiles").doc("frank").set({ approved: false, everApproved: false })
+      );
+      // Can't create a listing profile for someone else.
+      await assertFails(
+        db.collection("walkerProfiles").doc("someone-else").set({ approved: false, everApproved: false })
+      );
+    }
+
+    // --- dogs/{dogId} --------------------------------------------------------
+    {
+      const db = testEnv.authenticatedContext("frank").firestore();
+      await assertSucceeds(db.collection("dogs").doc("dog1").set({ ownerId: "frank" }));
+      // Can't claim a dog under someone else's ownerId.
+      await assertFails(db.collection("dogs").doc("dog2").set({ ownerId: "not-frank" }));
+    }
+
+    // --- bookings/{bookingId} -------------------------------------------------
+    {
+      // Uses "henry" as the walker, not "bob" — amy/bob were already blocked
+      // in the messages tests above, and that block persists for the rest of
+      // this run, which would make an amy/bob booking fail for the wrong reason.
+      const db = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(
+        db.collection("bookings").doc("b1").set({ ownerId: "amy", walkerId: "henry", status: "requested" })
+      );
+      // ownerId must match the requester — can't file a booking as someone else.
+      await assertFails(
+        db.collection("bookings").doc("b2").set({ ownerId: "someone-else", walkerId: "henry", status: "requested" })
+      );
+    }
+    // A blocked pair (zoe/adam, blocked above) can't create a booking either —
+    // isBlockedPair() gates bookings the same way it now gates messages.
+    {
+      const db = testEnv.authenticatedContext("zoe").firestore();
+      await assertFails(
+        db.collection("bookings").doc("b3").set({ ownerId: "zoe", walkerId: "adam", status: "requested" })
+      );
+    }
+
+    // --- reviews/{reviewId} ----------------------------------------------------
+    {
+      const db = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(db.collection("reviews").doc("r1").set({ reviewerId: "amy", rating: 5 }));
+      // Rating must be 1-5.
+      await assertFails(db.collection("reviews").doc("r2").set({ reviewerId: "amy", rating: 6 }));
+    }
+
+    // --- reports/{reportId} ------------------------------------------------------
+    {
+      const db = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(db.collection("reports").doc("rep1").set({ reporterId: "amy" }));
+      // Reports are admin-read-only — even the reporter can't read it back.
+      await assertFails(db.collection("reports").doc("rep1").get());
+      await assertSucceeds(adminDb.collection("reports").doc("rep1").get());
+    }
+
+    // --- bugReports/{reportId} -----------------------------------------------------
+    {
+      const db = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(db.collection("bugReports").doc("br1").set({ reporterId: "amy" }));
+      // Can't file a bug report under someone else's reporterId.
+      await assertFails(db.collection("bugReports").doc("br2").set({ reporterId: "someone-else" }));
+    }
+
+    // --- messageLimits/{uid} / bookingLimits/{uid} ----------------------------------
+    // Both are written only by Cloud Functions (Admin SDK bypasses rules) —
+    // the owner can read their own counter but never write it directly.
+    for (const collectionName of ["messageLimits", "bookingLimits"]) {
+      const db = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(db.collection(collectionName).doc("amy").get());
+      await assertFails(db.collection(collectionName).doc("amy").set({ count: 0 }));
+    }
+
     console.log("✓ firestore.rules tests passed");
   } finally {
     await testEnv.cleanup();
