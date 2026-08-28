@@ -71,6 +71,16 @@ jobs:
             --only auth,firestore,functions \
             "node testing/functions/run-admin-pin-tests.js"
 
+      # No Auth/Functions emulator needed — sendPushToUser/logInAppNotification
+      # are plain helper functions (unit-tested by requiring functions/index.js
+      # directly, see that test file's header), not an HTTP-reachable function.
+      - name: Notification plumbing tests
+        run: |
+          firebase emulators:exec \
+            --project dw-app-2beee \
+            --only firestore \
+            "node testing/functions/run-notification-plumbing-tests.js"
+
       - name: End-to-end tests (Playwright, against emulators)
         run: |
           firebase emulators:exec \

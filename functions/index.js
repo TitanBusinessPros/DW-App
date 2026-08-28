@@ -1,7 +1,11 @@
 // Dog Walker Cloud Functions.
 //
 // Implemented:
-//   - verifyAdminPin       — second-factor PIN gate for the admin panel embedded in public/dashboard.html
+//   - verifyAdminPin        — second-factor PIN gate for the admin panel embedded in public/dashboard.html
+//   - sendPushToUser /
+//     logInAppNotification  — shared notification plumbing, ported from Town-Talk/Town Fuss
+//                              (see docs/ARCHITECTURE.md); not exported themselves, exist as a
+//                              prerequisite for the notification-sending functions below
 //
 // Planned, adapted from patterns in a sibling Firebase project (see docs/ARCHITECTURE.md):
 //   - beforeSignInBlocking  — stamp a users/{uid} stub + lastKnownIp on first sign-in
@@ -9,17 +13,22 @@
 //   - onBookingRequested    — push notification to the walker on a new booking
 //   - onBookingStatusChange — push notification to the owner on accept/decline
 //   - onFirstMessageNotify  — push notification on the first message in a conversation
+//   - onProfileSubmitted /
+//     onNewSignup           — push notification to admins on a new/completed signup
 //   - stripeWebhook         — mark walkerProfiles/{uid}.listingPaidUntil on payment
 //   - expireWalkerListings  — scheduled job to unpublish lapsed listings
 
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const crypto = require("node:crypto");
 
 initializeApp();
+const db = getFirestore();
+const messaging = getMessaging();
 
 const ADMIN_PIN = defineSecret("ADMIN_PIN");
 
@@ -49,6 +58,117 @@ function withCors(req, res) {
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
+
+// -----------------------------------------------------------------------
+// Notification plumbing — ported from the sibling Town-Talk/Town Fuss
+// project's sendPushToUser()/logInAppNotification() (see docs/ARCHITECTURE.md).
+// No exported Cloud Function calls these yet; they exist as a prerequisite
+// for the notification-sending functions planned above (onFirstMessageNotify,
+// onProfileSubmitted, etc.) so each of those can just call sendPushToUser()
+// instead of re-deriving this logic. Covered by tests in
+// testing/functions/run-notification-plumbing-tests.js even though nothing
+// exports them yet, since check-function-coverage.js only checks exported
+// functions and these two are real, non-trivial logic worth verifying now
+// rather than trusting untested for however long until the first consumer
+// lands.
+// -----------------------------------------------------------------------
+
+// Writes the in-app notification-bell entry — the one thing every
+// notification always gets, independent of whether a push is also sent.
+async function logInAppNotification(uid, { type, title, body, clickAction }) {
+  try {
+    await db.collection("users").doc(uid).collection("notifications").add({
+      type,
+      title,
+      body,
+      clickAction: clickAction || "/",
+      read: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    console.error(`logInAppNotification(${uid}): failed:`, err);
+  }
+}
+
+// Logs the in-app notification, then also sends a push IF the user has
+// notifications enabled and at least one registered device token — silently
+// falls back to in-app-only otherwise (no user doc, disabled, or no tokens),
+// which is the normal case in every test environment (no real device ever
+// registers an FCM token against the emulator), so this never makes a live
+// FCM API call in CI.
+async function sendPushToUser(uid, { type, title, body, clickAction }) {
+  await logInAppNotification(uid, { type, title, body, clickAction });
+
+  const userSnap = await db.collection("users").doc(uid).get();
+  if (!userSnap.exists) {
+    console.log(`sendPushToUser(${uid}, ${type}): no users doc — in-app only`);
+    return;
+  }
+  const userData = userSnap.data();
+
+  if (!userData.notificationsEnabled) {
+    console.log(`sendPushToUser(${uid}, ${type}): notificationsEnabled is false — in-app only`);
+    return;
+  }
+  const tokens = Array.isArray(userData.fcmTokens) ? userData.fcmTokens : [];
+  if (tokens.length === 0) {
+    console.log(`sendPushToUser(${uid}, ${type}): notificationsEnabled but 0 fcmTokens — in-app only`);
+    return;
+  }
+
+  // Real unread count at send time (includes the one logInAppNotification
+  // just added above), carried in the data payload so the service worker
+  // can set the home-screen icon's badge number correctly even while the
+  // app is fully closed. FCM data payload values must be strings.
+  const unreadSnap = await db
+    .collection("users")
+    .doc(uid)
+    .collection("notifications")
+    .where("read", "==", false)
+    .count()
+    .get();
+  const badgeCount = String(unreadSnap.data().count);
+
+  const message = {
+    notification: { title, body },
+    data: { click_action: clickAction || "/", badgeCount },
+    tokens,
+  };
+
+  const response = await messaging.sendEachForMulticast(message);
+  console.log(
+    `sendPushToUser(${uid}, ${type}): sent to ${tokens.length} token(s), ` +
+      `${response.successCount} succeeded, ${response.failureCount} failed` +
+      (response.failureCount > 0
+        ? ` — errors: ${response.responses.filter((r) => !r.success).map((r) => r.error?.code).join(", ")}`
+        : "")
+  );
+
+  // Remove any token FCM says is no longer valid, so future sends don't
+  // keep wasting a call on a dead device.
+  const deadTokens = [];
+  response.responses.forEach((resp, i) => {
+    if (!resp.success) {
+      const code = resp.error?.code || "";
+      if (code.includes("registration-token-not-registered") || code.includes("invalid-argument")) {
+        deadTokens.push(tokens[i]);
+      }
+    }
+  });
+  if (deadTokens.length > 0) {
+    await db
+      .collection("users")
+      .doc(uid)
+      .update({ fcmTokens: FieldValue.arrayRemove(...deadTokens) });
+  }
+}
+
+// Exposed only so testing/functions/ can unit-test this logic directly —
+// sendPushToUser/logInAppNotification are plain helper functions, not
+// Cloud Functions, so Firebase's deploy-time function discovery (which
+// only picks up exports built via onRequest/onCall/onDocument*/onSchedule/
+// etc.) ignores this export entirely; it never becomes a deployed endpoint.
+exports.__testables = { sendPushToUser, logInAppNotification };
 
 // Called from the admin panel embedded in public/dashboard.html once
 // someone is signed in with Google. Being on the `admins/{email}`
@@ -102,7 +222,6 @@ exports.verifyAdminPin = onRequest({ secrets: [ADMIN_PIN], invoker: "public" }, 
     return;
   }
 
-  const db = getFirestore();
   const adminSnap = await db.collection("admins").doc(email).get();
   if (!adminSnap.exists) {
     res.status(403).json({ error: "Not authorized." });
