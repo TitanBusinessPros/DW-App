@@ -1,6 +1,6 @@
 # Wooflahoma Walks
 
-A dog walking marketplace (Rover-style) for Oklahoma — dog owners browse and message
+A dog walking marketplace for Oklahoma — dog owners browse and message
 local, independent walkers, then book and pay for a walk. Built on Firebase.
 
 (Repo name `DW-App` / Firebase project `dw-app-2beee` predate the product name and are
