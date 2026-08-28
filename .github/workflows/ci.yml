@@ -34,6 +34,12 @@ jobs:
         working-directory: functions
         run: npm install
 
+      # Fails fast (no emulator needed) if functions/index.js exports a
+      # Cloud Function with no matching test under testing/functions/ —
+      # see that script's header comment for what it does and doesn't catch.
+      - name: Check every Cloud Function has a matching test
+        run: node testing/functions/check-function-coverage.js
+
       - name: Install Playwright browsers
         working-directory: testing
         run: npx playwright install --with-deps chromium

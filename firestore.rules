@@ -175,7 +175,12 @@ service cloud.firestore {
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 1000
-                      && !exists(/databases/$(database)/documents/blocks/$(conversationId));
+                      // NOTE: must use isBlockedPair(), not exists(blocks/$(conversationId))
+                      // directly — conversationId is the fixed "{ownerUid}_{walkerUid}" order,
+                      // while blocks docs are keyed by the *sorted* pair (see isBlockedPair()
+                      // above), so a raw exists() check only worked by coincidence when
+                      // ownerUid happened to sort first.
+                      && !isBlockedPair(conversationId.split('_')[0], conversationId.split('_')[1]);
         allow update, delete: if false;
       }
     }
