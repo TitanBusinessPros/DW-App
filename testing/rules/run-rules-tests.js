@@ -280,6 +280,14 @@ async function main() {
       await assertSucceeds(db.collection("dogs").doc("dog1").set({ ownerId: "frank" }));
       // Can't claim a dog under someone else's ownerId.
       await assertFails(db.collection("dogs").doc("dog2").set({ ownerId: "not-frank" }));
+
+      // Private to the owner + admin only — NOT any approved user (breed/
+      // photo data being broadly readable is a real theft-targeting risk).
+      await assertSucceeds(db.collection("dogs").doc("dog1").get()); // frank reads his own dog
+      await assertSucceeds(adminDb.collection("dogs").doc("dog1").get()); // admin can read any dog
+      // amy is a different, approved user — still can't read frank's dog.
+      const amyDb = testEnv.authenticatedContext("amy").firestore();
+      await assertFails(amyDb.collection("dogs").doc("dog1").get());
     }
 
     // --- bookings/{bookingId} -------------------------------------------------
