@@ -53,13 +53,21 @@ async function main() {
   await db.collection("admins").doc("ghost-admin@example.com").set({}); // no Auth account — must not crash the flow
   // Note: these two writes each already carry a real profile.name, so they
   // themselves fire onNewSignup and cross-notify the other admin (proof the
-  // logic works before test 1 even runs) — settle() below lets those land
-  // before any test starts asserting notification counts, and every test
-  // after this matches by body content rather than assuming array position,
-  // since admin1/admin2 never start from a guaranteed-empty inbox.
+  // logic works before test 1 even runs) — admin1/admin2 never start from a
+  // guaranteed-empty inbox, and a fixed delay can't reliably guarantee a
+  // trigger has finished by a given wall-clock moment (that's exactly what
+  // broke test 1 in CI's slower/differently-timed environment the first time
+  // this was written — awaiting a write only guarantees the write, not the
+  // trigger it fires), so every test below either polls with waitFor() or
+  // measures a before/after delta rather than assuming an absolute count.
   await db.collection("users").doc("admin1-uid").set({ approved: true, profile: { name: "Admin One" } });
   await db.collection("users").doc("admin2-uid").set({ approved: true, profile: { name: "Admin Two" } });
-  await settle(1500);
+  // Wait for BOTH setup cross-notifications to actually land (not just a
+  // fixed delay) before capturing the baseline test 1 compares against.
+  await waitFor(async () => (await notificationsRef("admin1-uid").get()).size >= 1);
+  await waitFor(async () => (await notificationsRef("admin2-uid").get()).size >= 1);
+  const baseline1 = (await notificationsRef("admin1-uid").get()).size;
+  const baseline2 = (await notificationsRef("admin2-uid").get()).size;
 
   // 1. onNewSignup: a users/{uid} doc created WITHOUT a name doesn't notify anyone.
   {
@@ -67,8 +75,10 @@ async function main() {
     await settle();
     const snap1 = await notificationsRef("admin1-uid").get();
     const snap2 = await notificationsRef("admin2-uid").get();
-    if (snap1.size !== 0 || snap2.size !== 0) {
-      throw new Error(`expected no notifications for a nameless signup, got admin1=${snap1.size} admin2=${snap2.size}`);
+    if (snap1.size !== baseline1 || snap2.size !== baseline2) {
+      throw new Error(
+        `expected no NEW notifications for a nameless signup, went from baseline ${baseline1}/${baseline2} to ${snap1.size}/${snap2.size}`
+      );
     }
   }
 
