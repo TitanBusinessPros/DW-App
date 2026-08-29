@@ -286,15 +286,28 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
-    // reviews/{reviewId} — one review per completed booking, by the owner.
+    // reviews/{bookingId} — one review per completed booking, by the
+    // owner. Doc ID is the bookingId itself (not an arbitrary reviewId) —
+    // same natural-key pattern as conversations/{sortedPair} and
+    // blocks/{pairId} elsewhere in this file — which is what actually
+    // makes "one review per booking" enforceable at all: a second create
+    // attempt at the same ID is just a create on an existing doc, which
+    // Firestore rejects before rules even run, and update is admin-only.
+    // Previously this only validated rating shape — reviewerId/rating
+    // being present said nothing about the review being real (tied to an
+    // actual completed booking with that specific walker); tightened to
+    // that while building the actual reviews UI (Rover-parity item).
     // ---------------------------------------------------------------------
-    match /reviews/{reviewId} {
+    match /reviews/{bookingId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
                     && request.resource.data.reviewerId == request.auth.uid
                     && request.resource.data.rating is int
                     && request.resource.data.rating >= 1
-                    && request.resource.data.rating <= 5;
+                    && request.resource.data.rating <= 5
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.ownerId == request.auth.uid
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.walkerId == request.resource.data.walkerId
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.status == 'completed';
       allow update, delete: if isAdmin();
     }
 

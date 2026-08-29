@@ -425,12 +425,38 @@ async function main() {
       await assertSucceeds(henryDb.collection("bookings").doc("b9").update({ status: "completed" }));
     }
 
-    // --- reviews/{reviewId} ----------------------------------------------------
+    // --- reviews/{bookingId} -----------------------------------------------------
+    // Doc ID is the bookingId — b9 (amy owner, henry walker) was marked
+    // "completed" earlier in the bookings transition tests above.
     {
-      const db = testEnv.authenticatedContext("amy").firestore();
-      await assertSucceeds(db.collection("reviews").doc("r1").set({ reviewerId: "amy", rating: 5 }));
-      // Rating must be 1-5.
-      await assertFails(db.collection("reviews").doc("r2").set({ reviewerId: "amy", rating: 6 }));
+      const amyDb = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(
+        amyDb.collection("reviews").doc("b9").set({ reviewerId: "amy", walkerId: "henry", rating: 5 })
+      );
+      // Can't review the same booking twice — Firestore treats a second
+      // .set() on the now-existing doc as an update, not a create, and
+      // update is admin-only.
+      await assertFails(
+        amyDb.collection("reviews").doc("b9").set({ reviewerId: "amy", walkerId: "henry", rating: 3 })
+      );
+      // Rating must be 1-5 (on a fresh, not-yet-reviewed completed booking).
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection("bookings").doc("b10").set({ ownerId: "amy", walkerId: "henry", status: "completed" });
+      });
+      await assertFails(
+        amyDb.collection("reviews").doc("b10").set({ reviewerId: "amy", walkerId: "henry", rating: 6 })
+      );
+      // Can't review a booking that isn't completed yet (b7 was cancelled,
+      // not completed, in the transition tests above).
+      await assertFails(
+        amyDb.collection("reviews").doc("b7").set({ reviewerId: "amy", walkerId: "henry", rating: 5 })
+      );
+      // Can't review a booking you weren't the OWNER on — henry was the
+      // walker on b10, not the owner.
+      const henryDb = testEnv.authenticatedContext("henry").firestore();
+      await assertFails(
+        henryDb.collection("reviews").doc("b10").set({ reviewerId: "henry", walkerId: "henry", rating: 5 })
+      );
     }
 
     // --- reports/{reportId} ------------------------------------------------------
