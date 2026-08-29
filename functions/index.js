@@ -290,7 +290,15 @@ async function detectSafeSearch(gcsUri, fileName) {
 // bucket, so this deploys to the same default region as every other
 // function here. Worth revisiting only if a real deploy ever fails with a
 // region-mismatch error.
-exports.checkImageSafeSearch = onObjectFinalized(async (event) => {
+//
+// bucket is pinned explicitly (matches public/firebase-init.js's
+// storageBucket) rather than left to auto-resolve — confirmed this
+// matters: the Firebase CLI resolves the default bucket via a live,
+// authenticated API call, which works locally but silently differs in an
+// unauthenticated CI runner, causing the trigger to listen on the wrong
+// bucket and never fire at all. Pinning it removes that ambiguity in both
+// environments.
+exports.checkImageSafeSearch = onObjectFinalized({ bucket: "dw-app-2beee.firebasestorage.app" }, async (event) => {
   const filePath = event.data.name;
   const contentType = event.data.contentType || "";
   if (!contentType.startsWith("image/")) return;

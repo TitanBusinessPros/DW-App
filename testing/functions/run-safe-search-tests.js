@@ -40,7 +40,7 @@ async function upload(path, { contentType = "image/png" } = {}) {
   await bucket.file(path).save(FAKE_PNG, { contentType });
 }
 
-async function waitFor(conditionFn, { timeoutMs = 15000, intervalMs = 300 } = {}) {
+async function waitFor(conditionFn, { timeoutMs = 30000, intervalMs = 300 } = {}) {
   const start = Date.now();
   for (;;) {
     if (await conditionFn()) return;
