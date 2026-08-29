@@ -6,6 +6,9 @@
 //     logInAppNotification  — shared notification plumbing, ported from Town-Talk/Town Fuss
 //                              (see docs/ARCHITECTURE.md); not exported themselves, exist as a
 //                              prerequisite for the notification-sending functions below
+//   - onNewSignup /
+//     onProfileSubmitted    — push notification to admins on a new/completed signup, ported from
+//                              Town-Talk/Town Fuss
 //
 // Planned, adapted from patterns in a sibling Firebase project (see docs/ARCHITECTURE.md):
 //   - beforeSignInBlocking  — stamp a users/{uid} stub + lastKnownIp on first sign-in
@@ -13,8 +16,6 @@
 //   - onBookingRequested    — push notification to the walker on a new booking
 //   - onBookingStatusChange — push notification to the owner on accept/decline
 //   - onFirstMessageNotify  — push notification on the first message in a conversation
-//   - onProfileSubmitted /
-//     onNewSignup           — push notification to admins on a new/completed signup
 //   - stripeWebhook         — mark walkerProfiles/{uid}.listingPaidUntil on payment
 //   - expireWalkerListings  — scheduled job to unpublish lapsed listings
 
@@ -23,6 +24,7 @@ const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { onRequest } = require("firebase-functions/v2/https");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const crypto = require("node:crypto");
 
@@ -168,6 +170,67 @@ async function sendPushToUser(uid, { type, title, body, clickAction }) {
 // Cloud Functions, so Firebase's deploy-time function discovery (which
 // only picks up exports built via onRequest/onCall/onDocument*/onSchedule/
 // etc.) ignores this export entirely; it never becomes a deployed endpoint.
+// Notifies every allowlisted admin that someone new signed up.
+//
+// Adapted, not a straight port: Town-Talk's admins/{uid} collection is
+// keyed by uid, so it can call sendPushToUser(adminDoc.id, ...) directly.
+// Dog Walker's admins/{email} is deliberately keyed by EMAIL instead (see
+// docs/ARCHITECTURE.md — lets an address be pre-authorized before it's
+// ever signed in), so there's no uid sitting on the doc to push to. This
+// resolves email -> uid via the Auth admin SDK (the authoritative source,
+// rather than assuming any particular Firestore field holds it) — and an
+// admin who's never signed in yet simply has no Auth account to resolve,
+// which is expected, not an error, so that admin is just skipped.
+async function notifyAdminsOfSignup(newUid, name) {
+  const adminsSnap = await db.collection("admins").get();
+  if (adminsSnap.empty) return;
+
+  await Promise.all(
+    adminsSnap.docs.map(async (adminDoc) => {
+      const email = adminDoc.id;
+      let adminUid;
+      try {
+        adminUid = (await getAuth().getUserByEmail(email)).uid;
+      } catch (err) {
+        console.log(`notifyAdminsOfSignup: admin ${email} has no Auth account yet — skipping push`);
+        return;
+      }
+      if (adminUid === newUid) return; // don't notify an admin about their own signup
+
+      await sendPushToUser(adminUid, {
+        type: "signup",
+        title: "Dog Walker — New Sign-Up",
+        body: `${name} just signed up and is waiting on approval.`,
+        clickAction: "/dashboard.html",
+      });
+    })
+  );
+}
+
+// Dog Walker's signup flow is two steps (see docs/ARCHITECTURE.md /
+// decision log): Google sign-in creates the users/{uid} doc first — via
+// the client-side create rule, which requires role/townId/approved but
+// NOT a name — then the user fills out profile.name (and the rest of
+// their profile) in a separate step afterward. So exactly like Town-Talk,
+// two triggers are needed: one for the (currently unused, but rules-legal)
+// case where a name is already present at creation, and one for the
+// expected case where it's added later.
+exports.onNewSignup = onDocumentCreated("users/{uid}", async (event) => {
+  const newUser = event.data?.data();
+  if (!newUser?.profile?.name) return; // no real name yet — the normal case for this app's flow
+  const { uid } = event.params;
+  await notifyAdminsOfSignup(uid, newUser.profile.name);
+});
+
+exports.onProfileSubmitted = onDocumentUpdated("users/{uid}", async (event) => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after) return;
+  if (before.profile?.name || !after.profile?.name) return; // only the first time a REAL name appears
+  const { uid } = event.params;
+  await notifyAdminsOfSignup(uid, after.profile.name);
+});
+
 exports.__testables = { sendPushToUser, logInAppNotification };
 
 // Called from the admin panel embedded in public/dashboard.html once
