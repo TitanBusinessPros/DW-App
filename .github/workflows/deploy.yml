@@ -1,0 +1,119 @@
+# =============================================================================
+# Deploy to production — runs automatically after a merge to main.
+#
+# This is the second half of a two-gate pipeline. The FIRST gate is CI
+# (ci.yml) plus this repo's branch protection rule on main (requires the
+# "test" check to pass before anything can merge) — that gate controls what
+# reaches the `main` branch. This workflow is the SECOND, separate gate: it
+# controls what reaches the actual live website. Merging to main and
+# deploying to production used to be two disconnected things here — a PR
+# could pass CI, get merged, and the real site would still show the OLD
+# code until someone remembered to run `firebase deploy` by hand. This
+# workflow closes that gap: main passing CI now automatically becomes live,
+# with no manual step and no way to forget.
+#
+# -----------------------------------------------------------------------
+# HOW TO REPLICATE THIS PATTERN IN A DIFFERENT PROJECT
+# -----------------------------------------------------------------------
+# 1. Trigger on `workflow_run`, not `push`, and gate on `conclusion ==
+#    'success'` (see below). Two reasons this matters, not just style:
+#      - It reuses the SAME test run instead of re-running the whole suite
+#        a second time — cheaper, faster, and there's only one place
+#        (ci.yml) that defines what "passing" means.
+#      - It's a real safety gate, not just a trigger: if CI somehow failed
+#        (or if someone bypasses branch protection — an org admin
+#        force-merging, a direct push to main with protection
+#        misconfigured), this workflow simply won't fire the deploy at
+#        all, because `conclusion` won't be "success". A plain
+#        `on: push: branches: [main]` trigger would deploy REGARDLESS of
+#        whether the code actually passed anything, which defeats the
+#        entire point of gating a deploy behind CI.
+# 2. `workflows: ["<name>"]` must exactly match the `name:` field at the
+#    top of your CI workflow file (here, "CI" — see ci.yml's first line).
+# 3. `branches: [main]` on the workflow_run trigger filters to CI runs
+#    that happened ON main specifically — a CI run triggered by a
+#    `pull_request` event is associated with the PR's own branch, not
+#    main, so it's automatically excluded here. Only the CI run GitHub
+#    performs as part of an actual merge-to-main (a synthetic push)
+#    matches, which is exactly "code that just landed on main", not
+#    "someone opened a PR".
+# 4. You need a way for `firebase deploy` to authenticate non-interactively
+#    in CI (there's no browser to click through, unlike a human running
+#    `firebase login`). Two options, in order of setup effort:
+#      (a) A CI token: run `firebase login:ci` YOURSELF on your own
+#          machine (needs a real browser login once), which prints a
+#          token — never paste that token in chat/commits, only into the
+#          repo's GitHub secret below. Simpler, one command, works today.
+#      (b) A GCP service account: create one in the Firebase project with
+#          the roles deploying needs (Firebase Hosting Admin, Cloud
+#          Functions Admin, Firebase Rules Admin, Cloud Datastore/
+#          Firestore admin, Storage Admin, Service Account User), download
+#          its JSON key, store THAT as a GitHub secret, and authenticate
+#          via `google-github-actions/auth@v2` before calling
+#          `firebase deploy` (which then picks up the credentials
+#          automatically). More setup, but finer-grained and Google's
+#          longer-term-recommended direction for CI credentials.
+#    This repo uses (a) for simplicity — matches this project's existing
+#    "simple over clever" pattern elsewhere (e.g. no composite indexes
+#    where two plain queries suffice). Swap to (b) if you need tighter
+#    permission scoping later.
+# 5. Secrets used by your Cloud Functions at RUNTIME (e.g. this project's
+#    ADMIN_PIN, set once via `firebase functions:secrets:set`) are a
+#    SEPARATE concern from deploy authentication — they live in Google
+#    Secret Manager already, tied to the project, and don't need to be
+#    re-supplied by this workflow. This workflow only needs credentials
+#    that let it ACT on the project (deploy code), not the secrets your
+#    deployed code reads at runtime.
+# =============================================================================
+
+name: Deploy to production
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      # Checks out the EXACT commit that just passed CI (not a floating
+      # `main` ref) — main could theoretically have moved again in the
+      # narrow window between that CI run finishing and this job starting,
+      # and this makes sure this deploy is for the commit that was
+      # actually verified, not whatever main happens to be right now.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install functions dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools
+
+      # Deploys everything declared in firebase.json (hosting, firestore
+      # rules+indexes, storage rules, functions) — not an enumerated
+      # --only list, so a new deploy target added to firebase.json later
+      # is picked up automatically with no change needed here.
+      #
+      # FIREBASE_TOKEN set as an env var is how firebase-tools
+      # authenticates non-interactively — see the file header above for
+      # how to obtain one (`firebase login:ci`) and the GitHub secret this
+      # reads it from (repo Settings -> Secrets and variables -> Actions ->
+      # FIREBASE_TOKEN). Until that secret is set, this step fails with an
+      # auth error — deploy pipeline is wired up and ready, just waiting on
+      # that one manual, one-time setup step (same category as the
+      # ADMIN_PIN secret and the Stripe keys — things that only exist in
+      # dashboards this workflow can't reach on its own).
+      - name: Deploy to Firebase
+        run: firebase deploy --project dw-app-2beee --non-interactive
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
