@@ -26,6 +26,10 @@ const ADMIN_EMAIL = "admin-test@example.com";
 const NONADMIN_UID = "nonadmin-test-uid";
 const NONADMIN_EMAIL = "nonadmin-test@example.com";
 const PENDING_UID = "pending-test-uid";
+const APPROVED_WALKER_UID = "approved-walker-test-uid";
+const APPROVED_WALKER_EMAIL = "approved-walker-test@example.com";
+const OTHER_TOWN_WALKER_UID = "other-town-walker-test-uid";
+const OTHER_TOWN_WALKER_EMAIL = "other-town-walker-test@example.com";
 
 module.exports = async function globalSetup() {
   process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
@@ -41,6 +45,15 @@ module.exports = async function globalSetup() {
     population: 6112,
     walkerCap: 61,
     approvedWalkerCount: 0,
+    status: "open",
+  });
+  // A second town, only for browse.spec.js's town-scoping test.
+  await db.collection("towns").doc("wynnewood").set({
+    name: "Wynnewood",
+    county: "Garvin",
+    population: 2166,
+    walkerCap: 22,
+    approvedWalkerCount: 1,
     status: "open",
   });
 
@@ -79,6 +92,55 @@ module.exports = async function globalSetup() {
     confirmedAge18Plus: true,
     createdAt: new Date(),
   });
+  // An approved walker with a real, approved listing in Pauls Valley — for
+  // browse.spec.js, which only ever READS these two fixtures, never
+  // mutates them, so sharing them across multiple tests is safe (unlike
+  // the "fresh signup"/"fresh walker" fixtures elsewhere, which get
+  // minted per-test specifically because they DO get mutated).
+  await auth.createUser({ uid: APPROVED_WALKER_UID, email: APPROVED_WALKER_EMAIL, emailVerified: true }).catch(() => {});
+  await db.collection("users").doc(APPROVED_WALKER_UID).set({
+    profile: { name: "Wendy Walker" },
+    role: "walker",
+    townId: "pauls-valley",
+    approved: true,
+    everApproved: true,
+    agreedToTerms: true,
+    confirmedAge18Plus: true,
+    createdAt: new Date(),
+  });
+  await db.collection("walkerProfiles").doc(APPROVED_WALKER_UID).set({
+    approved: true,
+    everApproved: true,
+    townId: "pauls-valley",
+    bio: "I've been walking dogs in Pauls Valley for 3 years.",
+    hourlyRate: 20,
+    serviceRadius: 5,
+    availability: "Weekday mornings, weekends",
+  });
+
+  // Same shape, but in Wynnewood — browse.spec.js asserts this one does
+  // NOT show up when browsing from Pauls Valley (town-scoping).
+  await auth.createUser({ uid: OTHER_TOWN_WALKER_UID, email: OTHER_TOWN_WALKER_EMAIL, emailVerified: true }).catch(() => {});
+  await db.collection("users").doc(OTHER_TOWN_WALKER_UID).set({
+    profile: { name: "Wyatt Wynnewood" },
+    role: "walker",
+    townId: "wynnewood",
+    approved: true,
+    everApproved: true,
+    agreedToTerms: true,
+    confirmedAge18Plus: true,
+    createdAt: new Date(),
+  });
+  await db.collection("walkerProfiles").doc(OTHER_TOWN_WALKER_UID).set({
+    approved: true,
+    everApproved: true,
+    townId: "wynnewood",
+    bio: "Wynnewood's own dog walker.",
+    hourlyRate: 18,
+    serviceRadius: 8,
+    availability: "Flexible",
+  });
+
   const adminToken = await auth.createCustomToken(ADMIN_UID);
   const nonAdminToken = await auth.createCustomToken(NONADMIN_UID);
 

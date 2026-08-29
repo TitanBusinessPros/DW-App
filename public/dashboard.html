@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<div class="dev-banner">🚧 In development — this is a placeholder dashboard. Browsing walkers, messaging, and bookings aren't built yet.</div>
+<div class="dev-banner">🚧 In development — messaging and bookings aren't built yet.</div>
 
 <header class="site-header">
   <div class="container header-inner">
@@ -41,9 +41,10 @@
 
 <script type="module">
   import {
-    auth, db,
-    onAuthStateChanged, signOut, doc, getDoc, updateDoc,
+    auth, db, storage,
+    onAuthStateChanged, signOut, doc, getDoc, setDoc, updateDoc,
     collection, getDocs, query, where, serverTimestamp, callVerifyAdminPin,
+    ref, uploadBytes, getDownloadURL,
   } from "./firebase-init.js";
 
   const card = document.getElementById("dashboardCard");
@@ -111,16 +112,22 @@
           : `<span class="status-badge status-badge--pending">⏳ Pending review</span>`;
         const roleLabel = { owner: "Dog Owner", walker: "Dog Walker", both: "Dog Owner & Walker" }[userData.role] || userData.role;
 
+        const showBrowseLink = userData.approved && (userData.role === "owner" || userData.role === "both");
         card.innerHTML = `
           <h1>Hey, ${userData.profile.name || user.email}! 👋</h1>
           <p class="auth-subtitle">${roleLabel}</p>
           <div style="text-align:center; margin-bottom: 24px;">${statusBadge}</div>
           <p style="text-align:center;">
             ${userData.approved
-              ? "Your profile is approved! Browsing walkers and booking isn't built yet, but it's next."
+              ? "Your profile is approved! Booking isn't built yet, but it's next."
               : "Your profile is waiting on admin review. We'll notify you once it's approved — this app doesn't auto-approve yet."}
           </p>
+          ${showBrowseLink ? `<a href="browse.html" class="btn btn-primary btn-block" style="margin-top:12px;">Find a Walker</a>` : ""}
         `;
+
+        if (userData.role === "walker" || userData.role === "both") {
+          mountWalkerListingSection(user.uid, userData.townId);
+        }
       }
     } catch (err) {
       console.error("Failed to load profile:", err);
@@ -282,6 +289,127 @@
       showPendingList();
     } else {
       attachPinForm();
+    }
+  }
+
+  // Shown to a signed-in user whose role is "walker" or "both" — lets them
+  // create/edit the walkerProfiles/{uid} listing that walker discovery
+  // (Rover-parity item) will read from. Separate from account approval
+  // above: this is its own approve/reject cycle (firestore.rules'
+  // walkerProfiles/{uid} rules), gated the same way — approved/everApproved
+  // are admin-only, self-service edits are limited to bio/serviceRadius/
+  // hourlyRate/availability/photo.
+  async function mountWalkerListingSection(uid, ownerTownId) {
+    const section = document.createElement("section");
+    section.id = "walkerListingSection";
+    section.className = "auth-page";
+    section.style.paddingTop = "0";
+    section.innerHTML = `
+      <div class="auth-card" style="max-width:560px; margin:24px auto 0;" id="walkerListingCard">
+        <p>Loading your walker listing…</p>
+      </div>
+    `;
+    document.body.appendChild(section);
+    const listingCard = section.querySelector("#walkerListingCard");
+
+    function renderForm(existing) {
+      const statusBadge = existing
+        ? existing.approved
+          ? `<span class="status-badge status-badge--approved">✅ Approved</span>`
+          : `<span class="status-badge status-badge--pending">⏳ Pending review</span>`
+        : "";
+      listingCard.innerHTML = `
+        <h1>${existing ? "Your walker listing" : "Create your walker listing"}</h1>
+        <p class="auth-subtitle">Shown to dog owners once approved — a separate approval from your account above.</p>
+        ${statusBadge ? `<div style="text-align:center; margin-bottom: 16px;">${statusBadge}</div>` : ""}
+        <div id="listingError" class="form-error"></div>
+        <form id="listingForm">
+          <div class="form-group">
+            <label for="bio">About you</label>
+            <textarea id="bio" required maxlength="1000">${existing?.bio || ""}</textarea>
+          </div>
+          <div class="form-group">
+            <label for="hourlyRate">Hourly rate (USD)</label>
+            <input type="number" id="hourlyRate" min="1" step="0.5" required value="${existing?.hourlyRate ?? ""}">
+          </div>
+          <div class="form-group">
+            <label for="serviceRadius">Service radius (miles)</label>
+            <input type="number" id="serviceRadius" min="1" step="1" required value="${existing?.serviceRadius ?? ""}">
+          </div>
+          <div class="form-group">
+            <label for="availability">Availability</label>
+            <input type="text" id="availability" required placeholder="e.g. Weekday mornings, weekends" value="${existing?.availability || ""}">
+          </div>
+          <div class="form-group">
+            <label for="photo">Photo ${existing?.photo ? "(replace)" : "(optional)"}</label>
+            <input type="file" id="photo" accept="image/*">
+            <p class="form-hint">Photos are automatically screened before your listing shows publicly.</p>
+          </div>
+          <button type="submit" id="listingSubmitBtn" class="btn btn-primary btn-block">${existing ? "Save changes" : "Create listing"}</button>
+        </form>
+      `;
+
+      listingCard.querySelector("#listingForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const errorBox = listingCard.querySelector("#listingError");
+        errorBox.classList.remove("visible");
+        const submitBtn = listingCard.querySelector("#listingSubmitBtn");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Saving…";
+
+        try {
+          const bio = listingCard.querySelector("#bio").value.trim();
+          const hourlyRate = Number(listingCard.querySelector("#hourlyRate").value);
+          const serviceRadius = Number(listingCard.querySelector("#serviceRadius").value);
+          const availability = listingCard.querySelector("#availability").value.trim();
+          const photoFile = listingCard.querySelector("#photo").files[0];
+
+          let photoUrl = existing?.photo;
+          if (photoFile) {
+            const fileRef = ref(storage, `walkerProfiles/${uid}/${Date.now()}-${photoFile.name}`);
+            await uploadBytes(fileRef, photoFile);
+            photoUrl = await getDownloadURL(fileRef);
+          }
+
+          if (existing) {
+            // Update rule only allows these fields — approved/everApproved/
+            // listingPaidUntil are deliberately never sent here.
+            const updates = { bio, hourlyRate, serviceRadius, availability, lastEditedAt: serverTimestamp() };
+            if (photoUrl) updates.photo = photoUrl;
+            await updateDoc(doc(db, "walkerProfiles", uid), updates);
+          } else {
+            const payload = {
+              approved: false,
+              everApproved: false,
+              townId: ownerTownId, // denormalized from users/{uid} — lets discovery query walkerProfiles directly by town
+              bio, hourlyRate, serviceRadius, availability,
+              lastEditedAt: serverTimestamp(),
+            };
+            if (photoUrl) payload.photo = photoUrl;
+            await setDoc(doc(db, "walkerProfiles", uid), payload);
+          }
+
+          const freshSnap = await getDoc(doc(db, "walkerProfiles", uid));
+          renderForm(freshSnap.data());
+        } catch (err) {
+          console.error("Failed to save walker listing:", err);
+          errorBox.textContent = "Something went wrong saving your listing. Please try again.";
+          errorBox.classList.add("visible");
+          submitBtn.disabled = false;
+          submitBtn.textContent = existing ? "Save changes" : "Create listing";
+        }
+      });
+    }
+
+    try {
+      const snap = await withTimeout(getDoc(doc(db, "walkerProfiles", uid)), "Loading your walker listing timed out.");
+      renderForm(snap.exists() ? snap.data() : null);
+    } catch (err) {
+      console.error("Failed to load walker listing:", err);
+      listingCard.innerHTML = `
+        <h1>Something went wrong</h1>
+        <p>We couldn't load your walker listing (${err.message || "unknown error"}). Try refreshing the page.</p>
+      `;
     }
   }
 </script>
