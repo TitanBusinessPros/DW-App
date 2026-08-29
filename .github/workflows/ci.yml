@@ -71,6 +71,36 @@ jobs:
             --only auth,firestore,functions \
             "node testing/functions/run-admin-pin-tests.js"
 
+      # No Auth/Functions emulator needed — sendPushToUser/logInAppNotification
+      # are plain helper functions (unit-tested by requiring functions/index.js
+      # directly, see that test file's header), not an HTTP-reachable function.
+      - name: Notification plumbing tests
+        run: |
+          firebase emulators:exec \
+            --project dw-app-2beee \
+            --only firestore \
+            "node testing/functions/run-notification-plumbing-tests.js"
+
+      - name: onNewSignup / onProfileSubmitted Cloud Function tests
+        run: |
+          firebase emulators:exec \
+            --project dw-app-2beee \
+            --only auth,firestore,functions \
+            "node testing/functions/run-signup-notify-tests.js"
+
+      # DOG_WALKER_VISION_TEST_MODE=1 makes checkImageSafeSearch use a fake,
+      # deterministic SafeSearch result instead of calling the real Vision
+      # API — see that env var's comment in functions/index.js. Never set
+      # this outside a test run.
+      - name: checkImageSafeSearch Cloud Function tests
+        env:
+          DOG_WALKER_VISION_TEST_MODE: "1"
+        run: |
+          firebase emulators:exec \
+            --project dw-app-2beee \
+            --only auth,firestore,storage,functions \
+            "node testing/functions/run-safe-search-tests.js"
+
       - name: End-to-end tests (Playwright, against emulators)
         run: |
           firebase emulators:exec \

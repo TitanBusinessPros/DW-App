@@ -280,6 +280,14 @@ async function main() {
       await assertSucceeds(db.collection("dogs").doc("dog1").set({ ownerId: "frank" }));
       // Can't claim a dog under someone else's ownerId.
       await assertFails(db.collection("dogs").doc("dog2").set({ ownerId: "not-frank" }));
+
+      // Private to the owner + admin only — NOT any approved user (breed/
+      // photo data being broadly readable is a real theft-targeting risk).
+      await assertSucceeds(db.collection("dogs").doc("dog1").get()); // frank reads his own dog
+      await assertSucceeds(adminDb.collection("dogs").doc("dog1").get()); // admin can read any dog
+      // amy is a different, approved user — still can't read frank's dog.
+      const amyDb = testEnv.authenticatedContext("amy").firestore();
+      await assertFails(amyDb.collection("dogs").doc("dog1").get());
     }
 
     // --- bookings/{bookingId} -------------------------------------------------
@@ -337,6 +345,39 @@ async function main() {
       const db = testEnv.authenticatedContext("amy").firestore();
       await assertSucceeds(db.collection(collectionName).doc("amy").get());
       await assertFails(db.collection(collectionName).doc("amy").set({ count: 0 }));
+    }
+
+    // --- users/{uid}/notifications/{notifId} ----------------------------------------
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .collection("users")
+        .doc("frank")
+        .collection("notifications")
+        .doc("n1")
+        .set({ type: "test", title: "Hi", read: false });
+    });
+    {
+      const frankDb = testEnv.authenticatedContext("frank").firestore();
+      const bobDb = testEnv.authenticatedContext("bob").firestore();
+
+      await assertSucceeds(frankDb.collection("users").doc("frank").collection("notifications").doc("n1").get());
+      // Someone else can't read frank's notifications.
+      await assertFails(bobDb.collection("users").doc("frank").collection("notifications").doc("n1").get());
+
+      // Frank can mark his own notification read...
+      await assertSucceeds(
+        frankDb.collection("users").doc("frank").collection("notifications").doc("n1").update({ read: true })
+      );
+      // ...but can't change anything else about it.
+      await assertFails(
+        frankDb.collection("users").doc("frank").collection("notifications").doc("n1").update({ title: "changed" })
+      );
+      // Nobody creates or deletes one directly — Cloud-Function-only.
+      await assertFails(
+        frankDb.collection("users").doc("frank").collection("notifications").doc("n2").set({ type: "x", title: "x", read: false })
+      );
+      await assertFails(frankDb.collection("users").doc("frank").collection("notifications").doc("n1").delete());
     }
 
     console.log("✓ firestore.rules tests passed");

@@ -79,6 +79,19 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
+    // users/{uid}/notifications/{notifId} — the in-app notification bell.
+    // Written only by Cloud Functions (logInAppNotification, Admin SDK
+    // bypasses rules) — a client can read their own, and can mark one of
+    // their own as read, but can never create or delete one directly.
+    // ---------------------------------------------------------------------
+    match /users/{uid}/notifications/{notifId} {
+      allow read: if isOwnerUid(uid) || isAdmin();
+      allow update: if isOwnerUid(uid)
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false;
+    }
+
+    // ---------------------------------------------------------------------
     // users/{uid} — core identity for both owners and walkers.
     // ---------------------------------------------------------------------
     match /users/{uid} {
@@ -143,16 +156,23 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
-    // dogs/{dogId} — owned by a single user (the dog's owner).
+    // dogs/{dogId} — owned by a single user (the dog's owner). Private to
+    // the owner (+ admin) ONLY — deliberately not readable by other
+    // approved users. A breed/photo/location-adjacent profile being
+    // broadly readable is a real theft-targeting risk for valuable breeds,
+    // not just a privacy nicety, so this doesn't get the same "any
+    // approved user" treatment users/walkerProfiles listings get.
+    //
+    // A walker with an active booking will need to read the relevant dog's
+    // profile too, but that requires validating the requester is actually
+    // the walker on a real booking referencing this dog — bookings/{id}
+    // doesn't even have a validated dogIds field yet (see that collection's
+    // rules), so there's nothing safe to check against here yet. Add that
+    // as part of building the booking flow, not as a blanket bypass now.
     // ---------------------------------------------------------------------
     match /dogs/{dogId} {
       allow read: if isSignedIn()
-                  && (resource.data.ownerId == request.auth.uid
-                      || isAdmin()
-                      // a walker with an active booking for this dog can read it —
-                      // enforced app-side by only surfacing dogIds from their own bookings;
-                      // revisit if this needs to be a hard rule guarantee later.
-                      || isApproved(request.auth.uid));
+                  && (resource.data.ownerId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid || isAdmin();
     }
