@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find a Walker — Wooflahoma Walks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-badge">🐾</span>
+      <span class="logo-text">Wooflahoma Walks</span>
+    </a>
+    <div class="header-actions">
+      <a href="dashboard.html" class="btn btn-ghost">Back to dashboard</a>
+    </div>
+  </div>
+</header>
+
+<main class="auth-page">
+  <div class="auth-card" style="max-width:720px;" id="browseCard">
+    <p>Loading walkers…</p>
+  </div>
+</main>
+
+<script type="module">
+  import {
+    auth, db,
+    onAuthStateChanged, doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp,
+  } from "./firebase-init.js";
+
+  const card = document.getElementById("browseCard");
+  let currentUser = null;
+  let currentOwnTownId = null;
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
+  function walkerCardHtml(name, listing) {
+    const photo = listing.photo
+      ? `<img src="${escapeHtml(listing.photo)}" alt="${escapeHtml(name)}" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">`
+      : "";
+    return `
+      <div class="auth-card" style="max-width:100%; margin-bottom:16px; text-align:left;" data-walker-card="${escapeHtml(listing.uid)}">
+        ${photo}
+        <h2 style="margin:0 0 4px;">${escapeHtml(name)}</h2>
+        <p class="auth-subtitle" style="margin:0 0 10px;">$${escapeHtml(listing.hourlyRate)}/hr · within ${escapeHtml(listing.serviceRadius)} mi · ${escapeHtml(listing.availability)}</p>
+        <p style="margin:0 0 14px;">${escapeHtml(listing.bio)}</p>
+        <div data-request-area>
+          <button class="btn btn-primary" data-request-btn="${escapeHtml(listing.uid)}">Request a Walk</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function requestFormHtml(walkerUid) {
+    return `
+      <div class="form-group">
+        <label for="notes-${walkerUid}">When, and any details?</label>
+        <textarea id="notes-${walkerUid}" maxlength="500" placeholder="e.g. Tuesday afternoon, 30 min walk for a friendly lab"></textarea>
+      </div>
+      <div id="requestError-${walkerUid}" class="form-error"></div>
+      <button class="btn btn-primary" data-send-request="${walkerUid}">Send Request</button>
+      <button class="btn btn-ghost" data-cancel-request="${walkerUid}">Cancel</button>
+    `;
+  }
+
+  async function sendBookingRequest(walkerUid) {
+    const errorBox = document.getElementById(`requestError-${walkerUid}`);
+    errorBox.classList.remove("visible");
+    const sendBtn = document.querySelector(`[data-send-request="${walkerUid}"]`);
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Sending…";
+
+    try {
+      const notes = document.getElementById(`notes-${walkerUid}`).value.trim();
+      await addDoc(collection(db, "bookings"), {
+        ownerId: currentUser.uid,
+        walkerId: walkerUid,
+        townId: currentOwnTownId,
+        status: "requested",
+        notes,
+        createdAt: serverTimestamp(),
+        lastEditedAt: serverTimestamp(),
+      });
+      const area = document.querySelector(`[data-walker-card="${walkerUid}"] [data-request-area]`);
+      area.innerHTML = `<p style="color: var(--sage-600); font-weight: 700;">✅ Request sent!</p>`;
+    } catch (err) {
+      console.error("Failed to send booking request:", err);
+      errorBox.textContent = "Something went wrong sending your request. Please try again.";
+      errorBox.classList.add("visible");
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send Request";
+    }
+  }
+
+  card.addEventListener("click", (e) => {
+    const requestBtn = e.target.closest("[data-request-btn]");
+    if (requestBtn) {
+      const walkerUid = requestBtn.dataset.requestBtn;
+      document.querySelector(`[data-walker-card="${walkerUid}"] [data-request-area]`).innerHTML = requestFormHtml(walkerUid);
+      return;
+    }
+    const cancelBtn = e.target.closest("[data-cancel-request]");
+    if (cancelBtn) {
+      const walkerUid = cancelBtn.dataset.cancelRequest;
+      const area = document.querySelector(`[data-walker-card="${walkerUid}"] [data-request-area]`);
+      area.innerHTML = `<button class="btn btn-primary" data-request-btn="${walkerUid}">Request a Walk</button>`;
+      return;
+    }
+    const sendBtn = e.target.closest("[data-send-request]");
+    if (sendBtn) {
+      sendBookingRequest(sendBtn.dataset.sendRequest);
+    }
+  });
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      location.href = "login.html";
+      return;
+    }
+
+    try {
+      const ownSnap = await getDoc(doc(db, "users", user.uid));
+      if (!ownSnap.exists() || !ownSnap.data()?.profile?.name) {
+        location.href = "signup.html";
+        return;
+      }
+      const own = ownSnap.data();
+      if (!own.approved) {
+        card.innerHTML = `<h1>Not yet</h1><p>Your account needs to be approved before you can browse walkers. <a href="dashboard.html">Back to dashboard</a></p>`;
+        return;
+      }
+      currentUser = user;
+      currentOwnTownId = own.townId;
+
+      // Two equality filters on different fields (townId, approved) — no
+      // composite index needed, Firestore's automatic per-field indexes
+      // cover this. Would need one if a third field (e.g. orderBy) were added.
+      const q = query(
+        collection(db, "walkerProfiles"),
+        where("townId", "==", own.townId),
+        where("approved", "==", true)
+      );
+      const snap = await getDocs(q);
+      const listings = snap.docs
+        .map((d) => ({ uid: d.id, ...d.data() }))
+        .filter((l) => l.uid !== user.uid); // don't show yourself if you're also a walker
+
+      if (listings.length === 0) {
+        card.innerHTML = `<h1>No walkers yet</h1><p>Nobody's listed as an approved walker in your town yet — check back soon.</p>`;
+        return;
+      }
+
+      // walkerProfiles doesn't store a display name (it would go stale if
+      // someone edited their profile.name later) — a per-walker read of
+      // users/{uid} is allowed by firestore.rules (any approved user can
+      // read any other approved user's profile) and keeps this accurate.
+      const namedListings = await Promise.all(
+        listings.map(async (l) => {
+          const uSnap = await getDoc(doc(db, "users", l.uid));
+          const name = uSnap.exists() ? uSnap.data().profile?.name || "A walker" : "A walker";
+          return { ...l, name };
+        })
+      );
+
+      card.innerHTML = `<h1>Walkers near you</h1>` + namedListings.map((l) => walkerCardHtml(l.name, l)).join("");
+    } catch (err) {
+      console.error("Failed to load walkers:", err);
+      card.innerHTML = `
+        <h1>Something went wrong</h1>
+        <p>We couldn't load the walker list (${err.message || "unknown error"}). Try refreshing the page.</p>
+      `;
+    }
+  });
+</script>
+
+</body>
+</html>

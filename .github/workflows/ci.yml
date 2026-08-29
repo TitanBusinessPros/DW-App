@@ -101,6 +101,20 @@ jobs:
             --only auth,firestore,storage,functions \
             "node testing/functions/run-safe-search-tests.js"
 
+      - name: onFirstMessageNotify Cloud Function tests
+        run: |
+          firebase emulators:exec \
+            --project dw-app-2beee \
+            --only auth,firestore,functions \
+            "node testing/functions/run-first-message-notify-tests.js"
+
+      - name: onBookingRequested / onBookingStatusChange Cloud Function tests
+        run: |
+          firebase emulators:exec \
+            --project dw-app-2beee \
+            --only auth,firestore,functions \
+            "node testing/functions/run-booking-notify-tests.js"
+
       - name: End-to-end tests (Playwright, against emulators)
         run: |
           firebase emulators:exec \

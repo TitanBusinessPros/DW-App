@@ -26,26 +26,9 @@
     <p class="auth-subtitle">Log in to message walkers, manage bookings, and more.</p>
 
     <div id="formError" class="form-error"></div>
-    <div id="formNotice" class="form-notice"></div>
 
-    <form id="loginForm">
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" required autocomplete="email">
-      </div>
-
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" required autocomplete="current-password">
-      </div>
-
-      <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Log In</button>
-    </form>
-
-    <p class="auth-footer-link"><a href="#" id="forgotLink">Forgot your password?</a></p>
-
-    <div class="divider">or</div>
-
+    <!-- Google Sign-In only — no email/password account is ever created,
+         so there's nothing for an email/password form here to log into. -->
     <button id="googleBtn" class="btn btn-google btn-block">
       <span>🔵</span> Continue with Google
     </button>
@@ -56,81 +39,51 @@
 
 <script type="module">
   import {
-    auth,
-    onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider,
-    sendPasswordResetEmail,
+    auth, db,
+    onAuthStateChanged, signInWithPopup, GoogleAuthProvider,
+    doc, getDoc,
   } from "./firebase-init.js";
 
   const errorBox = document.getElementById("formError");
-  const noticeBox = document.getElementById("formNotice");
   function showError(msg) {
-    noticeBox.classList.remove("visible");
     errorBox.textContent = msg;
     errorBox.classList.add("visible");
-  }
-  function showNotice(msg) {
-    errorBox.classList.remove("visible");
-    noticeBox.textContent = msg;
-    noticeBox.classList.add("visible");
   }
 
   function friendlyAuthError(err) {
     const code = err?.code || "";
-    if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) {
-      return "That email/password combination doesn't match an account.";
-    }
-    if (code.includes("too-many-requests")) return "Too many attempts — please wait a bit and try again.";
     if (code.includes("popup-closed-by-user")) return "Google sign-in was closed before finishing.";
     return "Couldn't log you in. Please try again.";
   }
 
-  document.getElementById("loginForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const submitBtn = document.getElementById("submitBtn");
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Logging in…";
-    try {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-      await signInWithEmailAndPassword(auth, email, password);
-      location.href = "dashboard.html";
-    } catch (err) {
-      showError(friendlyAuthError(err));
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Log In";
-    }
-  });
+  async function hasCompleteProfile(uid) {
+    const snap = await getDoc(doc(db, "users", uid));
+    return snap.exists() && !!snap.data()?.profile?.name;
+  }
+
+  // Routes to dashboard.html normally, but to signup.html if this account
+  // authenticated with Google before but never finished the terms/profile
+  // steps (e.g. closed the tab mid-onboarding) — signup.html resumes
+  // exactly where they left off rather than making them start over.
+  async function routeSignedInUser(uid) {
+    location.href = (await hasCompleteProfile(uid)) ? "dashboard.html" : "signup.html";
+  }
 
   document.getElementById("googleBtn").addEventListener("click", async () => {
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-      location.href = "dashboard.html";
+      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+      await routeSignedInUser(cred.user.uid);
     } catch (err) {
       showError(friendlyAuthError(err));
     }
   });
 
-  document.getElementById("forgotLink").addEventListener("click", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("email").value.trim();
-    if (!email) {
-      showError("Enter your email above first, then click “Forgot your password?” again.");
-      return;
-    }
-    try {
-      await sendPasswordResetEmail(auth, email);
-      showNotice(`Password reset email sent to ${email} — check your inbox.`);
-    } catch (err) {
-      showError("Couldn't send a reset email for that address.");
-    }
-  });
-
-  // Already logged in? Skip straight to the dashboard. Unsubscribe after the
-  // first callback so this doesn't also fire (and race) when our own
-  // signInWithEmailAndPassword/signInWithPopup calls below sign someone in.
+  // Already logged in? Route appropriately. Unsubscribe after the first
+  // callback so this doesn't also fire (and race) when our own
+  // signInWithPopup call above signs someone in.
   const unsubscribe = onAuthStateChanged(auth, (user) => {
     unsubscribe();
-    if (user) location.href = "dashboard.html";
+    if (user) routeSignedInUser(user.uid);
   });
 </script>
 

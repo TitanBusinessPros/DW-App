@@ -12,12 +12,13 @@
 //   - checkImageSafeSearch  — Cloud Vision moderation on users/walkerProfiles photo uploads only
 //                              (NOT dogs — dog profiles are private to the owner, see
 //                              firestore.rules), ported from Town-Talk/Town Fuss
+//   - onFirstMessageNotify  — push notification on the first message in a conversation,
+//                              ported from Town-Talk/Town Fuss
+//   - onBookingRequested    — push notification to the walker on a new booking
+//   - onBookingStatusChange — push notification on accept/decline/cancel/complete
 //
 // Planned, adapted from patterns in a sibling Firebase project (see docs/ARCHITECTURE.md):
 //   - beforeSignInBlocking  — stamp a users/{uid} stub + lastKnownIp on first sign-in
-//   - onBookingRequested    — push notification to the walker on a new booking
-//   - onBookingStatusChange — push notification to the owner on accept/decline
-//   - onFirstMessageNotify  — push notification on the first message in a conversation
 //   - stripeWebhook         — mark walkerProfiles/{uid}.listingPaidUntil on payment
 //   - expireWalkerListings  — scheduled job to unpublish lapsed listings
 
@@ -345,6 +346,141 @@ exports.checkImageSafeSearch = onObjectFinalized({ bucket: "dw-app-2beee.firebas
     body: `An uploaded ${collection === "users" ? "profile" : "walker listing"} photo was flagged (${reason}) and pulled for review.`,
     clickAction: "/dashboard.html",
   });
+});
+
+// Fires on every new message, but only actually sends a push if this is
+// the FIRST message ever created in that conversation — checking whether
+// THIS message is the chronologically-oldest one (via the sentAt field
+// firestore.rules now requires to be the real server timestamp), not a
+// live count(). A live count is racy: if a second and third message land
+// before this trigger actually runs, the count is already >1 and a
+// genuinely-first message gets wrongly skipped. Checking "am I the
+// oldest" is race-proof regardless of how many later messages already
+// exist by the time this runs. Ported from Town-Talk's version of the
+// same function.
+exports.onFirstMessageNotify = onDocumentCreated(
+  "conversations/{conversationId}/messages/{messageId}",
+  async (event) => {
+    const message = event.data?.data();
+    if (!message) return;
+    const { conversationId, messageId } = event.params;
+
+    const messagesRef = db.collection("conversations").doc(conversationId).collection("messages");
+    const oldestSnap = await messagesRef.orderBy("sentAt", "asc").limit(1).get();
+    if (oldestSnap.empty || oldestSnap.docs[0].id !== messageId) return; // not the first message — skip
+
+    const convoSnap = await db.collection("conversations").doc(conversationId).get();
+    if (!convoSnap.exists) return;
+    const convo = convoSnap.data();
+
+    const recipientUid = (convo.participants || []).find((uid) => uid !== message.senderId);
+    if (!recipientUid) return;
+
+    // Looks up the sender's display name via users/{uid} rather than
+    // trusting a client-supplied field (Town-Talk uses participantNames on
+    // the conversation doc itself; Dog Walker's conversations create rule
+    // doesn't validate/require any such field, so there's nothing to trust
+    // there) — one extra read, but nothing new to validate in rules.
+    let senderName = "Someone";
+    try {
+      const senderSnap = await db.collection("users").doc(message.senderId).get();
+      if (senderSnap.exists) senderName = senderSnap.data().profile?.name || senderName;
+    } catch {
+      // Fall back to the generic name rather than failing the notification.
+    }
+
+    // TODO: clickAction should point at a real conversation-scoped route
+    // once the messaging UI (Rover-parity item — see docs/ARCHITECTURE.md)
+    // actually exists; dashboard.html is the closest existing page today.
+    await sendPushToUser(recipientUid, {
+      type: "message",
+      title: "Dog Walker — New Message",
+      body: `${senderName} sent you a message for the first time.`,
+      clickAction: "/dashboard.html",
+    });
+  }
+);
+
+// Notifies the walker of a brand-new walk request.
+exports.onBookingRequested = onDocumentCreated("bookings/{bookingId}", async (event) => {
+  const booking = event.data?.data();
+  if (!booking) return;
+
+  const ownerSnap = await db.collection("users").doc(booking.ownerId).get();
+  const ownerName = ownerSnap.exists ? ownerSnap.data().profile?.name || "A dog owner" : "A dog owner";
+
+  await sendPushToUser(booking.walkerId, {
+    type: "booking",
+    title: "Dog Walker — New Booking Request",
+    body: `${ownerName} requested a walk.`,
+    clickAction: "/dashboard.html",
+  });
+});
+
+// Notifies on accept/decline/cancel/complete. Who gets notified depends on
+// who's ALLOWED to have caused each transition (see firestore.rules'
+// isValidBookingTransition()) — accepted/declined can only come from the
+// walker, so only the owner needs telling; cancelled/completed can come
+// from either party (there's no actor field on the doc to know which),
+// so both get notified for those, accepting a little redundancy for the
+// one who made the change themselves rather than under-notifying.
+exports.onBookingStatusChange = onDocumentUpdated("bookings/{bookingId}", async (event) => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after || before.status === after.status) return;
+
+  const [ownerSnap, walkerSnap] = await Promise.all([
+    db.collection("users").doc(after.ownerId).get(),
+    db.collection("users").doc(after.walkerId).get(),
+  ]);
+  const ownerName = ownerSnap.exists ? ownerSnap.data().profile?.name || "The dog owner" : "The dog owner";
+  const walkerName = walkerSnap.exists ? walkerSnap.data().profile?.name || "The walker" : "The walker";
+
+  if (after.status === "accepted") {
+    await sendPushToUser(after.ownerId, {
+      type: "booking",
+      title: "Dog Walker — Request Accepted",
+      body: `${walkerName} accepted your walk request!`,
+      clickAction: "/dashboard.html",
+    });
+  } else if (after.status === "declined") {
+    await sendPushToUser(after.ownerId, {
+      type: "booking",
+      title: "Dog Walker — Request Declined",
+      body: `${walkerName} declined your walk request.`,
+      clickAction: "/dashboard.html",
+    });
+  } else if (after.status === "cancelled") {
+    await Promise.all([
+      sendPushToUser(after.ownerId, {
+        type: "booking",
+        title: "Dog Walker — Booking Cancelled",
+        body: `Your booking with ${walkerName} was cancelled.`,
+        clickAction: "/dashboard.html",
+      }),
+      sendPushToUser(after.walkerId, {
+        type: "booking",
+        title: "Dog Walker — Booking Cancelled",
+        body: `Your booking with ${ownerName} was cancelled.`,
+        clickAction: "/dashboard.html",
+      }),
+    ]);
+  } else if (after.status === "completed") {
+    await Promise.all([
+      sendPushToUser(after.ownerId, {
+        type: "booking",
+        title: "Dog Walker — Walk Completed",
+        body: `Your walk with ${walkerName} is marked complete.`,
+        clickAction: "/dashboard.html",
+      }),
+      sendPushToUser(after.walkerId, {
+        type: "booking",
+        title: "Dog Walker — Walk Completed",
+        body: `Your walk with ${ownerName} is marked complete.`,
+        clickAction: "/dashboard.html",
+      }),
+    ]);
+  }
 });
 
 // Exposed only so testing/functions/ can unit-test this logic directly —

@@ -36,6 +36,24 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/blocks/$(pairId));
     }
 
+    // Which bookings/{bookingId} status moves are actually legal, and by
+    // whom — the walker decides accept/decline on a request; either party
+    // can cancel a still-pending or accepted booking, or mark an accepted
+    // one complete; nothing moves once declined/cancelled/completed
+    // (terminal states), and a same-status write (a notes-only edit) is
+    // always fine. Payment-driven completion (Stripe) isn't wired up yet —
+    // "completed" here just means the walk happened, revisit once it is.
+    function isValidBookingTransition(before, after, uid) {
+      let isOwner = uid == before.ownerId;
+      let isWalker = uid == before.walkerId;
+      return before.status == after.status
+          || (before.status == 'requested' && after.status == 'accepted' && isWalker)
+          || (before.status == 'requested' && after.status == 'declined' && isWalker)
+          || (before.status == 'requested' && after.status == 'cancelled' && isOwner)
+          || (before.status == 'accepted' && after.status == 'cancelled' && (isOwner || isWalker))
+          || (before.status == 'accepted' && after.status == 'completed' && (isOwner || isWalker));
+    }
+
     // ---------------------------------------------------------------------
     // Admin allowlist, keyed by email — written only via the Firebase
     // console, never by users or client code. The doc's existence is the
@@ -195,6 +213,12 @@ service cloud.firestore {
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 1000
+                      // Must be the server timestamp (FieldValue.serverTimestamp()
+                      // client-side), not a client-supplied value — onFirstMessageNotify
+                      // orders by this field to find the chronologically-first message
+                      // in a conversation race-proof; a spoofable/backdated value would
+                      // break that ordering guarantee.
+                      && request.resource.data.sentAt == request.time
                       // NOTE: must use isBlockedPair(), not exists(blocks/$(conversationId))
                       // directly — conversationId is the fixed "{ownerUid}_{walkerUid}" order,
                       // while blocks docs are keyed by the *sorted* pair (see isBlockedPair()
@@ -208,9 +232,6 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
     // bookings/{bookingId} — a walk request and its lifecycle.
     // Only the owner or the walker on the booking can read/act on it.
-    // Status transitions are enforced app-side by Cloud Functions for now;
-    // revisit locking down valid status transitions in rules once the
-    // booking flow is built out.
     // ---------------------------------------------------------------------
     match /bookings/{bookingId} {
       allow read: if isSignedIn()
@@ -228,7 +249,8 @@ service cloud.firestore {
                     && (request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.walkerId)
                     // core booking terms are immutable once created — only status/notes move
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['status', 'notes', 'lastEditedAt']);
+                         .hasOnly(['status', 'notes', 'lastEditedAt'])
+                    && isValidBookingTransition(resource.data, request.resource.data, request.auth.uid);
 
       allow delete: if isAdmin();
     }

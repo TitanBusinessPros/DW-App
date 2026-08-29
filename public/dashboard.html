@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<div class="dev-banner">🚧 In development — this is a placeholder dashboard. Browsing walkers, messaging, and bookings aren't built yet.</div>
+<div class="dev-banner">🚧 In development — messaging isn't built yet.</div>
 
 <header class="site-header">
   <div class="container header-inner">
@@ -41,12 +41,25 @@
 
 <script type="module">
   import {
-    auth, db,
-    onAuthStateChanged, signOut, doc, getDoc, updateDoc,
+    auth, db, storage,
+    onAuthStateChanged, signOut, doc, getDoc, setDoc, updateDoc,
     collection, getDocs, query, where, serverTimestamp, callVerifyAdminPin,
+    ref, uploadBytes, getDownloadURL,
   } from "./firebase-init.js";
 
   const card = document.getElementById("dashboardCard");
+
+  // Every place below that interpolates user-controlled text (a display
+  // name, bio, booking notes, ...) into innerHTML or an HTML attribute
+  // goes through this — same helper introduced in browse.html for the
+  // same reason. Escaping &<>"' covers both plain HTML injection and
+  // breaking out of a quoted attribute (e.g. a bio containing a `"` in a
+  // `value="..."` field).
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
 
   // Anything awaited on this page (Firestore reads) goes through this so a
   // stalled network/emulator/rules-permission-check can never leave the UI
@@ -75,27 +88,61 @@
     if (user.uid === lastHandledUid) return;
     lastHandledUid = user.uid;
 
+    // Admin status is checked FIRST and independently of the regular
+    // owner/walker profile below — an admin is purely someone on the
+    // admins/{email} allowlist (see docs/ARCHITECTURE.md) and was never
+    // required to also have a completed regular profile. Redirecting an
+    // incomplete-profile user to signup.html (below) must not apply to an
+    // admin just because they don't happen to have one.
+    let isAdminUser = false;
+    try {
+      if (user.email) {
+        const adminSnap = await withTimeout(getDoc(doc(db, "admins", user.email)), "Admin check timed out.");
+        isAdminUser = adminSnap.exists();
+      }
+    } catch (err) {
+      console.error("Admin allowlist check failed:", err);
+    }
+
     try {
       const snap = await withTimeout(getDoc(doc(db, "users", user.uid)), "Loading your profile timed out.");
-      if (!snap.exists()) {
-        card.innerHTML = `<h1>Welcome!</h1><p>We couldn't find a profile for your account yet. Try signing up again.</p>`;
+      // No doc, or a doc that never finished the profile step (see
+      // signup.html) — send a regular (non-admin) user to finish onboarding
+      // rather than showing a dead-end message here. An admin without a
+      // regular profile still gets the admin panel below, so just show a
+      // light note instead of redirecting them away from it.
+      if (!snap.exists() || !snap.data()?.profile?.name) {
+        if (!isAdminUser) {
+          location.href = "signup.html";
+          return;
+        }
+        card.innerHTML = `<h1>Welcome!</h1><p>You don't have a regular profile yet — the admin panel below is still available.</p>`;
       } else {
-        const profile = snap.data();
-        const statusBadge = profile.approved
+        const userData = snap.data();
+        const statusBadge = userData.approved
           ? `<span class="status-badge status-badge--approved">✅ Approved</span>`
           : `<span class="status-badge status-badge--pending">⏳ Pending review</span>`;
-        const roleLabel = { owner: "Dog Owner", walker: "Dog Walker", both: "Dog Owner & Walker" }[profile.role] || profile.role;
+        const roleLabel = { owner: "Dog Owner", walker: "Dog Walker", both: "Dog Owner & Walker" }[userData.role] || userData.role;
 
+        const showBrowseLink = userData.approved && (userData.role === "owner" || userData.role === "both");
         card.innerHTML = `
-          <h1>Hey, ${profile.displayName || user.email}! 👋</h1>
+          <h1>Hey, ${escapeHtml(userData.profile.name || user.email)}! 👋</h1>
           <p class="auth-subtitle">${roleLabel}</p>
           <div style="text-align:center; margin-bottom: 24px;">${statusBadge}</div>
           <p style="text-align:center;">
-            ${profile.approved
-              ? "Your profile is approved! Browsing walkers and booking isn't built yet, but it's next."
+            ${userData.approved
+              ? "Your profile is approved!"
               : "Your profile is waiting on admin review. We'll notify you once it's approved — this app doesn't auto-approve yet."}
           </p>
+          ${showBrowseLink ? `<a href="browse.html" class="btn btn-primary btn-block" style="margin-top:12px;">Find a Walker</a>` : ""}
         `;
+
+        if (userData.role === "walker" || userData.role === "both") {
+          mountWalkerListingSection(user.uid, userData.townId);
+        }
+        if (userData.approved) {
+          mountBookingsSection(user.uid, userData.role);
+        }
       }
     } catch (err) {
       console.error("Failed to load profile:", err);
@@ -105,21 +152,7 @@
       `;
     }
 
-    // Real auth check via Firestore rules (isSignedIn() && token.email ==
-    // the doc id) — this is what actually decides whether the section
-    // below gets created at all, not anything client-side. Guarded
-    // separately so a failure here can't affect the profile card above,
-    // which has already rendered by this point either way.
-    try {
-      if (user.email) {
-        const adminSnap = await withTimeout(getDoc(doc(db, "admins", user.email)), "Admin check timed out.");
-        if (adminSnap.exists()) {
-          mountAdminSection(user.uid);
-        }
-      }
-    } catch (err) {
-      console.error("Admin allowlist check failed:", err);
-    }
+    if (isAdminUser) mountAdminSection(user.uid);
   });
 
   document.getElementById("logoutBtn").addEventListener("click", async () => {
@@ -228,9 +261,9 @@
             <tbody>
               ${pending.map((p) => `
                 <tr id="row-${p.id}" style="border-bottom: 1px solid var(--sage-100);">
-                  <td style="padding:8px;">${p.displayName || "(no name)"}</td>
-                  <td style="padding:8px;">${roleLabel(p.role)}</td>
-                  <td style="padding:8px;">${p.townId || "—"}</td>
+                  <td style="padding:8px;">${escapeHtml(p.profile?.name || "(no name)")}</td>
+                  <td style="padding:8px;">${escapeHtml(roleLabel(p.role))}</td>
+                  <td style="padding:8px;">${escapeHtml(p.townId || "—")}</td>
                   <td style="padding:8px;">${p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString() : "—"}</td>
                   <td style="padding:8px; white-space:nowrap;">
                     <button class="btn btn-primary" data-approve="${p.id}" style="padding:6px 14px;">Approve</button>
@@ -271,6 +304,240 @@
       showPendingList();
     } else {
       attachPinForm();
+    }
+  }
+
+  // Shown to a signed-in user whose role is "walker" or "both" — lets them
+  // create/edit the walkerProfiles/{uid} listing that walker discovery
+  // (Rover-parity item) will read from. Separate from account approval
+  // above: this is its own approve/reject cycle (firestore.rules'
+  // walkerProfiles/{uid} rules), gated the same way — approved/everApproved
+  // are admin-only, self-service edits are limited to bio/serviceRadius/
+  // hourlyRate/availability/photo.
+  async function mountWalkerListingSection(uid, ownerTownId) {
+    const section = document.createElement("section");
+    section.id = "walkerListingSection";
+    section.className = "auth-page";
+    section.style.paddingTop = "0";
+    section.innerHTML = `
+      <div class="auth-card" style="max-width:560px; margin:24px auto 0;" id="walkerListingCard">
+        <p>Loading your walker listing…</p>
+      </div>
+    `;
+    document.body.appendChild(section);
+    const listingCard = section.querySelector("#walkerListingCard");
+
+    function renderForm(existing) {
+      const statusBadge = existing
+        ? existing.approved
+          ? `<span class="status-badge status-badge--approved">✅ Approved</span>`
+          : `<span class="status-badge status-badge--pending">⏳ Pending review</span>`
+        : "";
+      listingCard.innerHTML = `
+        <h1>${existing ? "Your walker listing" : "Create your walker listing"}</h1>
+        <p class="auth-subtitle">Shown to dog owners once approved — a separate approval from your account above.</p>
+        ${statusBadge ? `<div style="text-align:center; margin-bottom: 16px;">${statusBadge}</div>` : ""}
+        <div id="listingError" class="form-error"></div>
+        <form id="listingForm">
+          <div class="form-group">
+            <label for="bio">About you</label>
+            <textarea id="bio" required maxlength="1000">${escapeHtml(existing?.bio || "")}</textarea>
+          </div>
+          <div class="form-group">
+            <label for="hourlyRate">Hourly rate (USD)</label>
+            <input type="number" id="hourlyRate" min="1" step="0.5" required value="${escapeHtml(existing?.hourlyRate ?? "")}">
+          </div>
+          <div class="form-group">
+            <label for="serviceRadius">Service radius (miles)</label>
+            <input type="number" id="serviceRadius" min="1" step="1" required value="${escapeHtml(existing?.serviceRadius ?? "")}">
+          </div>
+          <div class="form-group">
+            <label for="availability">Availability</label>
+            <input type="text" id="availability" required placeholder="e.g. Weekday mornings, weekends" value="${escapeHtml(existing?.availability || "")}">
+          </div>
+          <div class="form-group">
+            <label for="photo">Photo ${existing?.photo ? "(replace)" : "(optional)"}</label>
+            <input type="file" id="photo" accept="image/*">
+            <p class="form-hint">Photos are automatically screened before your listing shows publicly.</p>
+          </div>
+          <button type="submit" id="listingSubmitBtn" class="btn btn-primary btn-block">${existing ? "Save changes" : "Create listing"}</button>
+        </form>
+      `;
+
+      listingCard.querySelector("#listingForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const errorBox = listingCard.querySelector("#listingError");
+        errorBox.classList.remove("visible");
+        const submitBtn = listingCard.querySelector("#listingSubmitBtn");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Saving…";
+
+        try {
+          const bio = listingCard.querySelector("#bio").value.trim();
+          const hourlyRate = Number(listingCard.querySelector("#hourlyRate").value);
+          const serviceRadius = Number(listingCard.querySelector("#serviceRadius").value);
+          const availability = listingCard.querySelector("#availability").value.trim();
+          const photoFile = listingCard.querySelector("#photo").files[0];
+
+          let photoUrl = existing?.photo;
+          if (photoFile) {
+            const fileRef = ref(storage, `walkerProfiles/${uid}/${Date.now()}-${photoFile.name}`);
+            await uploadBytes(fileRef, photoFile);
+            photoUrl = await getDownloadURL(fileRef);
+          }
+
+          if (existing) {
+            // Update rule only allows these fields — approved/everApproved/
+            // listingPaidUntil are deliberately never sent here.
+            const updates = { bio, hourlyRate, serviceRadius, availability, lastEditedAt: serverTimestamp() };
+            if (photoUrl) updates.photo = photoUrl;
+            await updateDoc(doc(db, "walkerProfiles", uid), updates);
+          } else {
+            const payload = {
+              approved: false,
+              everApproved: false,
+              townId: ownerTownId, // denormalized from users/{uid} — lets discovery query walkerProfiles directly by town
+              bio, hourlyRate, serviceRadius, availability,
+              lastEditedAt: serverTimestamp(),
+            };
+            if (photoUrl) payload.photo = photoUrl;
+            await setDoc(doc(db, "walkerProfiles", uid), payload);
+          }
+
+          const freshSnap = await getDoc(doc(db, "walkerProfiles", uid));
+          renderForm(freshSnap.data());
+        } catch (err) {
+          console.error("Failed to save walker listing:", err);
+          errorBox.textContent = "Something went wrong saving your listing. Please try again.";
+          errorBox.classList.add("visible");
+          submitBtn.disabled = false;
+          submitBtn.textContent = existing ? "Save changes" : "Create listing";
+        }
+      });
+    }
+
+    try {
+      const snap = await withTimeout(getDoc(doc(db, "walkerProfiles", uid)), "Loading your walker listing timed out.");
+      renderForm(snap.exists() ? snap.data() : null);
+    } catch (err) {
+      console.error("Failed to load walker listing:", err);
+      listingCard.innerHTML = `
+        <h1>Something went wrong</h1>
+        <p>We couldn't load your walker listing (${err.message || "unknown error"}). Try refreshing the page.</p>
+      `;
+    }
+  }
+
+  // Shown to any approved user — owners see bookings they requested,
+  // walkers see requests made to them, "both"-role users see all of
+  // theirs merged together. Two separate single-equality queries
+  // (ownerId==uid, walkerId==uid) rather than one OR query — no composite
+  // index needed either way, same reasoning as browse.html's query.
+  async function mountBookingsSection(uid, role) {
+    const section = document.createElement("section");
+    section.id = "bookingsSection";
+    section.className = "auth-page";
+    section.style.paddingTop = "0";
+    section.innerHTML = `
+      <div class="auth-card" style="max-width:720px; margin:24px auto 0;" id="bookingsCard">
+        <h1>Your bookings</h1>
+        <div id="bookingsList"><p>Loading…</p></div>
+      </div>
+    `;
+    document.body.appendChild(section);
+    const listArea = section.querySelector("#bookingsList");
+
+    function statusBadgeHtml(status) {
+      const map = {
+        requested: ["⏳", "Pending"],
+        accepted: ["✅", "Accepted"],
+        declined: ["❌", "Declined"],
+        cancelled: ["🚫", "Cancelled"],
+        completed: ["🏁", "Completed"],
+      };
+      const [emoji, label] = map[status] || ["", status];
+      return `<span class="status-badge">${emoji} ${escapeHtml(label)}</span>`;
+    }
+
+    async function actOn(bookingId, newStatus) {
+      const row = listArea.querySelector(`[data-booking-row="${bookingId}"]`);
+      row.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      try {
+        await updateDoc(doc(db, "bookings", bookingId), { status: newStatus, lastEditedAt: serverTimestamp() });
+        await loadBookings();
+      } catch (err) {
+        console.error("Failed to update booking:", err);
+        row.querySelectorAll("button").forEach((b) => (b.disabled = false));
+        alert("That didn't go through: " + (err?.message || err));
+      }
+    }
+
+    async function loadBookings() {
+      listArea.innerHTML = "<p>Loading…</p>";
+
+      const queries = [];
+      if (role === "owner" || role === "both") queries.push(query(collection(db, "bookings"), where("ownerId", "==", uid)));
+      if (role === "walker" || role === "both") queries.push(query(collection(db, "bookings"), where("walkerId", "==", uid)));
+
+      const snaps = await Promise.all(queries.map((q) => getDocs(q)));
+      const byId = new Map();
+      snaps.forEach((snap) => snap.forEach((d) => byId.set(d.id, { id: d.id, ...d.data() })));
+      const bookings = [...byId.values()].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+      if (bookings.length === 0) {
+        listArea.innerHTML = "<p>No bookings yet.</p>";
+        return;
+      }
+
+      // Counterpart's name via a per-doc users/{uid} read, same reasoning
+      // as browse.html: no denormalized name to go stale.
+      const named = await Promise.all(
+        bookings.map(async (b) => {
+          const isMineAsOwner = b.ownerId === uid;
+          const counterpartUid = isMineAsOwner ? b.walkerId : b.ownerId;
+          const counterpartSnap = await getDoc(doc(db, "users", counterpartUid));
+          const counterpartName = counterpartSnap.exists() ? counterpartSnap.data().profile?.name || "Someone" : "Someone";
+          return { ...b, isMineAsOwner, counterpartName };
+        })
+      );
+
+      listArea.innerHTML = named
+        .map((b) => {
+          let actions = "";
+          if (!b.isMineAsOwner && b.status === "requested") {
+            actions = `
+              <button class="btn btn-primary" data-accept="${b.id}" style="padding:6px 14px;">Accept</button>
+              <button class="btn btn-ghost" data-decline="${b.id}" style="padding:6px 14px;">Decline</button>
+            `;
+          } else if (b.isMineAsOwner && b.status === "requested") {
+            actions = `<button class="btn btn-ghost" data-cancel="${b.id}" style="padding:6px 14px;">Cancel</button>`;
+          } else if (b.status === "accepted") {
+            actions = `
+              <button class="btn btn-primary" data-complete="${b.id}" style="padding:6px 14px;">Mark Complete</button>
+              <button class="btn btn-ghost" data-cancel="${b.id}" style="padding:6px 14px;">Cancel</button>
+            `;
+          }
+          return `
+            <div data-booking-row="${b.id}" style="border-bottom: 1px solid var(--sage-100); padding: 12px 0;">
+              <p style="margin:0 0 4px;"><strong>${escapeHtml(b.counterpartName)}</strong> — ${b.isMineAsOwner ? "your walker" : "wants you to walk their dog"}</p>
+              <p style="margin:0 0 8px;">${statusBadgeHtml(b.status)}${b.notes ? ` · ${escapeHtml(b.notes)}` : ""}</p>
+              ${actions}
+            </div>
+          `;
+        })
+        .join("");
+
+      listArea.querySelectorAll("[data-accept]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.accept, "accepted")));
+      listArea.querySelectorAll("[data-decline]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.decline, "declined")));
+      listArea.querySelectorAll("[data-cancel]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.cancel, "cancelled")));
+      listArea.querySelectorAll("[data-complete]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.complete, "completed")));
+    }
+
+    try {
+      await loadBookings();
+    } catch (err) {
+      console.error("Failed to load bookings:", err);
+      listArea.innerHTML = `<p>Something went wrong loading your bookings (${err.message || "unknown error"}). Try refreshing the page.</p>`;
     }
   }
 </script>
