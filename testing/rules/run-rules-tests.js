@@ -215,6 +215,57 @@ async function main() {
       }
     });
 
+    // --- conversations/{conversationId} create/update -------------------------
+    {
+      const amyDb = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(
+        amyDb.collection("conversations").doc("amy_bob").set({ participants: ["amy", "bob"] })
+      );
+      // Can't create a conversation you're not actually part of.
+      await assertFails(
+        amyDb.collection("conversations").doc("bob_zoe").set({ participants: ["bob", "zoe"] })
+      );
+      // Participants must be exactly 2.
+      await assertFails(
+        amyDb.collection("conversations").doc("amy_bob_zoe").set({ participants: ["amy", "bob", "zoe"] })
+      );
+
+      // A participant can update bookkeeping fields (lastMessageAt)...
+      await assertSucceeds(
+        amyDb.collection("conversations").doc("amy_bob").update({ lastMessageAt: serverTimestamp() })
+      );
+      // ...but can't rewrite who the other participant is, even while
+      // still including themselves.
+      await assertFails(
+        amyDb.collection("conversations").doc("amy_bob").update({ participants: ["amy", "someone-else"] })
+      );
+      // Someone who isn't a participant at all can't update it either.
+      const zoeDb = testEnv.authenticatedContext("zoe").firestore();
+      await assertFails(
+        zoeDb.collection("conversations").doc("amy_bob").update({ lastMessageAt: serverTimestamp() })
+      );
+
+      // Reading a conversation that doesn't exist yet fails cleanly (not a
+      // rules-evaluation crash) — real bug this caught: the read rule used
+      // to dereference resource.data.participants with no exists() guard,
+      // which throws instead of denying when resource.data is null for a
+      // nonexistent doc. messages.html deliberately never reads a
+      // conversation before writing it (see that file) specifically to
+      // avoid ever hitting this path in practice, but the rule itself
+      // must still fail safely if something else ever does.
+      await assertFails(amyDb.collection("conversations").doc("brand-new-nobody-made-yet").get());
+
+      // The upsert messages.html actually performs — merge-writing the
+      // SAME deterministically-sorted participants array — succeeds both
+      // as a fresh create AND as a idempotent no-op against an existing doc.
+      await assertSucceeds(
+        amyDb.collection("conversations").doc("amy_henry").set({ participants: ["amy", "henry"] }, { merge: true })
+      );
+      await assertSucceeds(
+        amyDb.collection("conversations").doc("amy_henry").set({ participants: ["amy", "henry"] }, { merge: true })
+      );
+    }
+
     // Sanity: an unblocked, approved pair can message each other.
     {
       const db = testEnv.authenticatedContext("amy").firestore();

@@ -58,6 +58,7 @@
         <div data-request-area>
           <button class="btn btn-primary" data-request-btn="${escapeHtml(listing.uid)}">Request a Walk</button>
         </div>
+        <a href="messages.html?with=${encodeURIComponent(listing.uid)}" class="btn btn-ghost" style="margin-top:8px; display:inline-block;">Message</a>
       </div>
     `;
   }

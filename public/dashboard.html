@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<div class="dev-banner">🚧 In development — messaging isn't built yet.</div>
+<div class="dev-banner">🚧 In development — reviews aren't built yet.</div>
 
 <header class="site-header">
   <div class="container header-inner">
@@ -497,7 +497,7 @@
           const counterpartUid = isMineAsOwner ? b.walkerId : b.ownerId;
           const counterpartSnap = await getDoc(doc(db, "users", counterpartUid));
           const counterpartName = counterpartSnap.exists() ? counterpartSnap.data().profile?.name || "Someone" : "Someone";
-          return { ...b, isMineAsOwner, counterpartName };
+          return { ...b, isMineAsOwner, counterpartUid, counterpartName };
         })
       );
 
@@ -522,6 +522,7 @@
               <p style="margin:0 0 4px;"><strong>${escapeHtml(b.counterpartName)}</strong> — ${b.isMineAsOwner ? "your walker" : "wants you to walk their dog"}</p>
               <p style="margin:0 0 8px;">${statusBadgeHtml(b.status)}${b.notes ? ` · ${escapeHtml(b.notes)}` : ""}</p>
               ${actions}
+              <a href="messages.html?with=${encodeURIComponent(b.counterpartUid)}" class="btn btn-ghost" style="padding:6px 14px; margin-top:6px; display:inline-block;">Message</a>
             </div>
           `;
         })
