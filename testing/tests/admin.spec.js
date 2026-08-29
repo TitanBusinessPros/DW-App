@@ -49,11 +49,12 @@ test("a logged-out visitor to dashboard.html gets no admin markup — it redirec
 
 test("a signed-in, non-allowlisted user never gets the admin section created", async ({ page }) => {
   await signInThenGoToDashboard(page, tokens.nonAdminToken);
-  // nonAdminToken's user has a real, complete profile (see
-  // emulator-seed.js), so both an h1 AND a status badge render — target h1
-  // specifically rather than the old ".status-badge, h1" (ambiguous now
-  // that both are genuinely present at once).
-  await expect(page.locator("h1")).toBeVisible();
+  // nonAdminToken's user has a real, complete, APPROVED profile (see
+  // emulator-seed.js), so an h1 AND a status badge render on the profile
+  // card, AND the bookings section mounts its own separate h1 ("Your
+  // bookings") — scoped to #dashboardCard specifically, since a bare "h1"
+  // now matches both.
+  await expect(page.locator("#dashboardCard h1")).toBeVisible();
   await expect(page.locator("#adminSection")).toHaveCount(0);
 });
 

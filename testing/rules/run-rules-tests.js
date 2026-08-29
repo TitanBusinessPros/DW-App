@@ -338,6 +338,42 @@ async function main() {
       );
     }
 
+    // --- bookings/{bookingId} status transitions ------------------------------
+    {
+      const amyDb = testEnv.authenticatedContext("amy").firestore();
+      const henryDb = testEnv.authenticatedContext("henry").firestore();
+
+      // Only the WALKER can accept/decline a request — not the owner.
+      await amyDb.collection("bookings").doc("b4").set({ ownerId: "amy", walkerId: "henry", status: "requested" });
+      await assertFails(amyDb.collection("bookings").doc("b4").update({ status: "accepted" }));
+      await assertSucceeds(henryDb.collection("bookings").doc("b4").update({ status: "accepted" }));
+
+      await amyDb.collection("bookings").doc("b5").set({ ownerId: "amy", walkerId: "henry", status: "requested" });
+      await assertSucceeds(henryDb.collection("bookings").doc("b5").update({ status: "declined" }));
+
+      // Can't skip straight from requested to completed.
+      await amyDb.collection("bookings").doc("b6").set({ ownerId: "amy", walkerId: "henry", status: "requested" });
+      await assertFails(henryDb.collection("bookings").doc("b6").update({ status: "completed" }));
+
+      // Either party can cancel an accepted booking.
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection("bookings").doc("b7").set({ ownerId: "amy", walkerId: "henry", status: "accepted" });
+      });
+      await assertSucceeds(amyDb.collection("bookings").doc("b7").update({ status: "cancelled" }));
+
+      // Terminal states don't move — a declined booking can't be revived.
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection("bookings").doc("b8").set({ ownerId: "amy", walkerId: "henry", status: "declined" });
+      });
+      await assertFails(henryDb.collection("bookings").doc("b8").update({ status: "accepted" }));
+
+      // Either party can mark an accepted booking complete.
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection("bookings").doc("b9").set({ ownerId: "amy", walkerId: "henry", status: "accepted" });
+      });
+      await assertSucceeds(henryDb.collection("bookings").doc("b9").update({ status: "completed" }));
+    }
+
     // --- reviews/{reviewId} ----------------------------------------------------
     {
       const db = testEnv.authenticatedContext("amy").firestore();

@@ -34,8 +34,11 @@ async function signInThenGoTo(page, token, url) {
 test("an approved owner sees the approved walker in their own town", async ({ page }) => {
   await signInThenGoTo(page, tokens.nonAdminToken, "/browse.html");
   await expect(page.locator("h1")).toContainText("Walkers near you");
-  await expect(page.getByText("Wendy Walker")).toBeVisible();
-  await expect(page.getByText("$20/hr")).toBeVisible();
+  // Scoped to Wendy Walker's own card — other tests' fresh walker fixtures
+  // can also land in Pauls Valley with the same $20/hr rate, making an
+  // unscoped page-wide "$20/hr" text search ambiguous.
+  const wendyCard = page.locator("[data-walker-card]").filter({ hasText: "Wendy Walker" });
+  await expect(wendyCard).toContainText("$20/hr");
 });
 
 test("a walker listed in a different town does not show up", async ({ page }) => {

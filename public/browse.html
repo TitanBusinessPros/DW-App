@@ -32,10 +32,12 @@
 <script type="module">
   import {
     auth, db,
-    onAuthStateChanged, doc, getDoc, collection, query, where, getDocs,
+    onAuthStateChanged, doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp,
   } from "./firebase-init.js";
 
   const card = document.getElementById("browseCard");
+  let currentUser = null;
+  let currentOwnTownId = null;
 
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (c) => ({
@@ -48,14 +50,78 @@
       ? `<img src="${escapeHtml(listing.photo)}" alt="${escapeHtml(name)}" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">`
       : "";
     return `
-      <div class="auth-card" style="max-width:100%; margin-bottom:16px; text-align:left;">
+      <div class="auth-card" style="max-width:100%; margin-bottom:16px; text-align:left;" data-walker-card="${escapeHtml(listing.uid)}">
         ${photo}
         <h2 style="margin:0 0 4px;">${escapeHtml(name)}</h2>
         <p class="auth-subtitle" style="margin:0 0 10px;">$${escapeHtml(listing.hourlyRate)}/hr · within ${escapeHtml(listing.serviceRadius)} mi · ${escapeHtml(listing.availability)}</p>
-        <p style="margin:0;">${escapeHtml(listing.bio)}</p>
+        <p style="margin:0 0 14px;">${escapeHtml(listing.bio)}</p>
+        <div data-request-area>
+          <button class="btn btn-primary" data-request-btn="${escapeHtml(listing.uid)}">Request a Walk</button>
+        </div>
       </div>
     `;
   }
+
+  function requestFormHtml(walkerUid) {
+    return `
+      <div class="form-group">
+        <label for="notes-${walkerUid}">When, and any details?</label>
+        <textarea id="notes-${walkerUid}" maxlength="500" placeholder="e.g. Tuesday afternoon, 30 min walk for a friendly lab"></textarea>
+      </div>
+      <div id="requestError-${walkerUid}" class="form-error"></div>
+      <button class="btn btn-primary" data-send-request="${walkerUid}">Send Request</button>
+      <button class="btn btn-ghost" data-cancel-request="${walkerUid}">Cancel</button>
+    `;
+  }
+
+  async function sendBookingRequest(walkerUid) {
+    const errorBox = document.getElementById(`requestError-${walkerUid}`);
+    errorBox.classList.remove("visible");
+    const sendBtn = document.querySelector(`[data-send-request="${walkerUid}"]`);
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Sending…";
+
+    try {
+      const notes = document.getElementById(`notes-${walkerUid}`).value.trim();
+      await addDoc(collection(db, "bookings"), {
+        ownerId: currentUser.uid,
+        walkerId: walkerUid,
+        townId: currentOwnTownId,
+        status: "requested",
+        notes,
+        createdAt: serverTimestamp(),
+        lastEditedAt: serverTimestamp(),
+      });
+      const area = document.querySelector(`[data-walker-card="${walkerUid}"] [data-request-area]`);
+      area.innerHTML = `<p style="color: var(--sage-600); font-weight: 700;">✅ Request sent!</p>`;
+    } catch (err) {
+      console.error("Failed to send booking request:", err);
+      errorBox.textContent = "Something went wrong sending your request. Please try again.";
+      errorBox.classList.add("visible");
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send Request";
+    }
+  }
+
+  card.addEventListener("click", (e) => {
+    const requestBtn = e.target.closest("[data-request-btn]");
+    if (requestBtn) {
+      const walkerUid = requestBtn.dataset.requestBtn;
+      document.querySelector(`[data-walker-card="${walkerUid}"] [data-request-area]`).innerHTML = requestFormHtml(walkerUid);
+      return;
+    }
+    const cancelBtn = e.target.closest("[data-cancel-request]");
+    if (cancelBtn) {
+      const walkerUid = cancelBtn.dataset.cancelRequest;
+      const area = document.querySelector(`[data-walker-card="${walkerUid}"] [data-request-area]`);
+      area.innerHTML = `<button class="btn btn-primary" data-request-btn="${walkerUid}">Request a Walk</button>`;
+      return;
+    }
+    const sendBtn = e.target.closest("[data-send-request]");
+    if (sendBtn) {
+      sendBookingRequest(sendBtn.dataset.sendRequest);
+    }
+  });
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -74,6 +140,8 @@
         card.innerHTML = `<h1>Not yet</h1><p>Your account needs to be approved before you can browse walkers. <a href="dashboard.html">Back to dashboard</a></p>`;
         return;
       }
+      currentUser = user;
+      currentOwnTownId = own.townId;
 
       // Two equality filters on different fields (townId, approved) — no
       // composite index needed, Firestore's automatic per-field indexes

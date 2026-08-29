@@ -14,11 +14,11 @@
 //                              firestore.rules), ported from Town-Talk/Town Fuss
 //   - onFirstMessageNotify  — push notification on the first message in a conversation,
 //                              ported from Town-Talk/Town Fuss
+//   - onBookingRequested    — push notification to the walker on a new booking
+//   - onBookingStatusChange — push notification on accept/decline/cancel/complete
 //
 // Planned, adapted from patterns in a sibling Firebase project (see docs/ARCHITECTURE.md):
 //   - beforeSignInBlocking  — stamp a users/{uid} stub + lastKnownIp on first sign-in
-//   - onBookingRequested    — push notification to the walker on a new booking
-//   - onBookingStatusChange — push notification to the owner on accept/decline
 //   - stripeWebhook         — mark walkerProfiles/{uid}.listingPaidUntil on payment
 //   - expireWalkerListings  — scheduled job to unpublish lapsed listings
 
@@ -400,6 +400,88 @@ exports.onFirstMessageNotify = onDocumentCreated(
     });
   }
 );
+
+// Notifies the walker of a brand-new walk request.
+exports.onBookingRequested = onDocumentCreated("bookings/{bookingId}", async (event) => {
+  const booking = event.data?.data();
+  if (!booking) return;
+
+  const ownerSnap = await db.collection("users").doc(booking.ownerId).get();
+  const ownerName = ownerSnap.exists ? ownerSnap.data().profile?.name || "A dog owner" : "A dog owner";
+
+  await sendPushToUser(booking.walkerId, {
+    type: "booking",
+    title: "Dog Walker — New Booking Request",
+    body: `${ownerName} requested a walk.`,
+    clickAction: "/dashboard.html",
+  });
+});
+
+// Notifies on accept/decline/cancel/complete. Who gets notified depends on
+// who's ALLOWED to have caused each transition (see firestore.rules'
+// isValidBookingTransition()) — accepted/declined can only come from the
+// walker, so only the owner needs telling; cancelled/completed can come
+// from either party (there's no actor field on the doc to know which),
+// so both get notified for those, accepting a little redundancy for the
+// one who made the change themselves rather than under-notifying.
+exports.onBookingStatusChange = onDocumentUpdated("bookings/{bookingId}", async (event) => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after || before.status === after.status) return;
+
+  const [ownerSnap, walkerSnap] = await Promise.all([
+    db.collection("users").doc(after.ownerId).get(),
+    db.collection("users").doc(after.walkerId).get(),
+  ]);
+  const ownerName = ownerSnap.exists ? ownerSnap.data().profile?.name || "The dog owner" : "The dog owner";
+  const walkerName = walkerSnap.exists ? walkerSnap.data().profile?.name || "The walker" : "The walker";
+
+  if (after.status === "accepted") {
+    await sendPushToUser(after.ownerId, {
+      type: "booking",
+      title: "Dog Walker — Request Accepted",
+      body: `${walkerName} accepted your walk request!`,
+      clickAction: "/dashboard.html",
+    });
+  } else if (after.status === "declined") {
+    await sendPushToUser(after.ownerId, {
+      type: "booking",
+      title: "Dog Walker — Request Declined",
+      body: `${walkerName} declined your walk request.`,
+      clickAction: "/dashboard.html",
+    });
+  } else if (after.status === "cancelled") {
+    await Promise.all([
+      sendPushToUser(after.ownerId, {
+        type: "booking",
+        title: "Dog Walker — Booking Cancelled",
+        body: `Your booking with ${walkerName} was cancelled.`,
+        clickAction: "/dashboard.html",
+      }),
+      sendPushToUser(after.walkerId, {
+        type: "booking",
+        title: "Dog Walker — Booking Cancelled",
+        body: `Your booking with ${ownerName} was cancelled.`,
+        clickAction: "/dashboard.html",
+      }),
+    ]);
+  } else if (after.status === "completed") {
+    await Promise.all([
+      sendPushToUser(after.ownerId, {
+        type: "booking",
+        title: "Dog Walker — Walk Completed",
+        body: `Your walk with ${walkerName} is marked complete.`,
+        clickAction: "/dashboard.html",
+      }),
+      sendPushToUser(after.walkerId, {
+        type: "booking",
+        title: "Dog Walker — Walk Completed",
+        body: `Your walk with ${ownerName} is marked complete.`,
+        clickAction: "/dashboard.html",
+      }),
+    ]);
+  }
+});
 
 // Exposed only so testing/functions/ can unit-test this logic directly —
 // these are plain helper functions, not Cloud Functions, so Firebase's

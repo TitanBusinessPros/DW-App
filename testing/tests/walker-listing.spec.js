@@ -93,7 +93,9 @@ test("a walker with no listing yet sees the create form and can submit it", asyn
 test("an owner-only user never sees the walker listing section", async ({ page }) => {
   const { token } = await mintWalkerUser({ role: "owner" });
   await signInThenGoTo(page, token, "/dashboard.html");
-  await expect(page.locator("h1")).toBeVisible(); // the regular profile card still renders
+  // Scoped to #dashboardCard — this fixture is approved, so the bookings
+  // section also mounts its own separate "Your bookings" h1.
+  await expect(page.locator("#dashboardCard h1")).toBeVisible(); // the regular profile card still renders
   await expect(page.locator("#walkerListingSection")).toHaveCount(0);
 });
 

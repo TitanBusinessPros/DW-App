@@ -109,7 +109,9 @@ test("an already-onboarded user visiting login.html goes straight to the dashboa
   // to share across tests unlike the "fresh signup" ones above.
   await signInThenGoTo(page, tokens.nonAdminToken, "/login.html");
   await page.waitForURL("**/dashboard.html");
-  await expect(page.locator("h1")).toContainText("Nonadmin Test User");
+  // Scoped to #dashboardCard — nonAdminToken's user is approved, so the
+  // bookings section also mounts its own separate "Your bookings" h1.
+  await expect(page.locator("#dashboardCard h1")).toContainText("Nonadmin Test User");
 });
 
 test("a signed-in user who never finished onboarding is routed from login.html to resume signup", async ({ page }) => {

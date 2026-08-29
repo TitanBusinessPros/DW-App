@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<div class="dev-banner">🚧 In development — messaging and bookings aren't built yet.</div>
+<div class="dev-banner">🚧 In development — messaging isn't built yet.</div>
 
 <header class="site-header">
   <div class="container header-inner">
@@ -48,6 +48,18 @@
   } from "./firebase-init.js";
 
   const card = document.getElementById("dashboardCard");
+
+  // Every place below that interpolates user-controlled text (a display
+  // name, bio, booking notes, ...) into innerHTML or an HTML attribute
+  // goes through this — same helper introduced in browse.html for the
+  // same reason. Escaping &<>"' covers both plain HTML injection and
+  // breaking out of a quoted attribute (e.g. a bio containing a `"` in a
+  // `value="..."` field).
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
 
   // Anything awaited on this page (Firestore reads) goes through this so a
   // stalled network/emulator/rules-permission-check can never leave the UI
@@ -114,12 +126,12 @@
 
         const showBrowseLink = userData.approved && (userData.role === "owner" || userData.role === "both");
         card.innerHTML = `
-          <h1>Hey, ${userData.profile.name || user.email}! 👋</h1>
+          <h1>Hey, ${escapeHtml(userData.profile.name || user.email)}! 👋</h1>
           <p class="auth-subtitle">${roleLabel}</p>
           <div style="text-align:center; margin-bottom: 24px;">${statusBadge}</div>
           <p style="text-align:center;">
             ${userData.approved
-              ? "Your profile is approved! Booking isn't built yet, but it's next."
+              ? "Your profile is approved!"
               : "Your profile is waiting on admin review. We'll notify you once it's approved — this app doesn't auto-approve yet."}
           </p>
           ${showBrowseLink ? `<a href="browse.html" class="btn btn-primary btn-block" style="margin-top:12px;">Find a Walker</a>` : ""}
@@ -127,6 +139,9 @@
 
         if (userData.role === "walker" || userData.role === "both") {
           mountWalkerListingSection(user.uid, userData.townId);
+        }
+        if (userData.approved) {
+          mountBookingsSection(user.uid, userData.role);
         }
       }
     } catch (err) {
@@ -246,9 +261,9 @@
             <tbody>
               ${pending.map((p) => `
                 <tr id="row-${p.id}" style="border-bottom: 1px solid var(--sage-100);">
-                  <td style="padding:8px;">${p.profile?.name || "(no name)"}</td>
-                  <td style="padding:8px;">${roleLabel(p.role)}</td>
-                  <td style="padding:8px;">${p.townId || "—"}</td>
+                  <td style="padding:8px;">${escapeHtml(p.profile?.name || "(no name)")}</td>
+                  <td style="padding:8px;">${escapeHtml(roleLabel(p.role))}</td>
+                  <td style="padding:8px;">${escapeHtml(p.townId || "—")}</td>
                   <td style="padding:8px;">${p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString() : "—"}</td>
                   <td style="padding:8px; white-space:nowrap;">
                     <button class="btn btn-primary" data-approve="${p.id}" style="padding:6px 14px;">Approve</button>
@@ -326,19 +341,19 @@
         <form id="listingForm">
           <div class="form-group">
             <label for="bio">About you</label>
-            <textarea id="bio" required maxlength="1000">${existing?.bio || ""}</textarea>
+            <textarea id="bio" required maxlength="1000">${escapeHtml(existing?.bio || "")}</textarea>
           </div>
           <div class="form-group">
             <label for="hourlyRate">Hourly rate (USD)</label>
-            <input type="number" id="hourlyRate" min="1" step="0.5" required value="${existing?.hourlyRate ?? ""}">
+            <input type="number" id="hourlyRate" min="1" step="0.5" required value="${escapeHtml(existing?.hourlyRate ?? "")}">
           </div>
           <div class="form-group">
             <label for="serviceRadius">Service radius (miles)</label>
-            <input type="number" id="serviceRadius" min="1" step="1" required value="${existing?.serviceRadius ?? ""}">
+            <input type="number" id="serviceRadius" min="1" step="1" required value="${escapeHtml(existing?.serviceRadius ?? "")}">
           </div>
           <div class="form-group">
             <label for="availability">Availability</label>
-            <input type="text" id="availability" required placeholder="e.g. Weekday mornings, weekends" value="${existing?.availability || ""}">
+            <input type="text" id="availability" required placeholder="e.g. Weekday mornings, weekends" value="${escapeHtml(existing?.availability || "")}">
           </div>
           <div class="form-group">
             <label for="photo">Photo ${existing?.photo ? "(replace)" : "(optional)"}</label>
@@ -410,6 +425,119 @@
         <h1>Something went wrong</h1>
         <p>We couldn't load your walker listing (${err.message || "unknown error"}). Try refreshing the page.</p>
       `;
+    }
+  }
+
+  // Shown to any approved user — owners see bookings they requested,
+  // walkers see requests made to them, "both"-role users see all of
+  // theirs merged together. Two separate single-equality queries
+  // (ownerId==uid, walkerId==uid) rather than one OR query — no composite
+  // index needed either way, same reasoning as browse.html's query.
+  async function mountBookingsSection(uid, role) {
+    const section = document.createElement("section");
+    section.id = "bookingsSection";
+    section.className = "auth-page";
+    section.style.paddingTop = "0";
+    section.innerHTML = `
+      <div class="auth-card" style="max-width:720px; margin:24px auto 0;" id="bookingsCard">
+        <h1>Your bookings</h1>
+        <div id="bookingsList"><p>Loading…</p></div>
+      </div>
+    `;
+    document.body.appendChild(section);
+    const listArea = section.querySelector("#bookingsList");
+
+    function statusBadgeHtml(status) {
+      const map = {
+        requested: ["⏳", "Pending"],
+        accepted: ["✅", "Accepted"],
+        declined: ["❌", "Declined"],
+        cancelled: ["🚫", "Cancelled"],
+        completed: ["🏁", "Completed"],
+      };
+      const [emoji, label] = map[status] || ["", status];
+      return `<span class="status-badge">${emoji} ${escapeHtml(label)}</span>`;
+    }
+
+    async function actOn(bookingId, newStatus) {
+      const row = listArea.querySelector(`[data-booking-row="${bookingId}"]`);
+      row.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      try {
+        await updateDoc(doc(db, "bookings", bookingId), { status: newStatus, lastEditedAt: serverTimestamp() });
+        await loadBookings();
+      } catch (err) {
+        console.error("Failed to update booking:", err);
+        row.querySelectorAll("button").forEach((b) => (b.disabled = false));
+        alert("That didn't go through: " + (err?.message || err));
+      }
+    }
+
+    async function loadBookings() {
+      listArea.innerHTML = "<p>Loading…</p>";
+
+      const queries = [];
+      if (role === "owner" || role === "both") queries.push(query(collection(db, "bookings"), where("ownerId", "==", uid)));
+      if (role === "walker" || role === "both") queries.push(query(collection(db, "bookings"), where("walkerId", "==", uid)));
+
+      const snaps = await Promise.all(queries.map((q) => getDocs(q)));
+      const byId = new Map();
+      snaps.forEach((snap) => snap.forEach((d) => byId.set(d.id, { id: d.id, ...d.data() })));
+      const bookings = [...byId.values()].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+      if (bookings.length === 0) {
+        listArea.innerHTML = "<p>No bookings yet.</p>";
+        return;
+      }
+
+      // Counterpart's name via a per-doc users/{uid} read, same reasoning
+      // as browse.html: no denormalized name to go stale.
+      const named = await Promise.all(
+        bookings.map(async (b) => {
+          const isMineAsOwner = b.ownerId === uid;
+          const counterpartUid = isMineAsOwner ? b.walkerId : b.ownerId;
+          const counterpartSnap = await getDoc(doc(db, "users", counterpartUid));
+          const counterpartName = counterpartSnap.exists() ? counterpartSnap.data().profile?.name || "Someone" : "Someone";
+          return { ...b, isMineAsOwner, counterpartName };
+        })
+      );
+
+      listArea.innerHTML = named
+        .map((b) => {
+          let actions = "";
+          if (!b.isMineAsOwner && b.status === "requested") {
+            actions = `
+              <button class="btn btn-primary" data-accept="${b.id}" style="padding:6px 14px;">Accept</button>
+              <button class="btn btn-ghost" data-decline="${b.id}" style="padding:6px 14px;">Decline</button>
+            `;
+          } else if (b.isMineAsOwner && b.status === "requested") {
+            actions = `<button class="btn btn-ghost" data-cancel="${b.id}" style="padding:6px 14px;">Cancel</button>`;
+          } else if (b.status === "accepted") {
+            actions = `
+              <button class="btn btn-primary" data-complete="${b.id}" style="padding:6px 14px;">Mark Complete</button>
+              <button class="btn btn-ghost" data-cancel="${b.id}" style="padding:6px 14px;">Cancel</button>
+            `;
+          }
+          return `
+            <div data-booking-row="${b.id}" style="border-bottom: 1px solid var(--sage-100); padding: 12px 0;">
+              <p style="margin:0 0 4px;"><strong>${escapeHtml(b.counterpartName)}</strong> — ${b.isMineAsOwner ? "your walker" : "wants you to walk their dog"}</p>
+              <p style="margin:0 0 8px;">${statusBadgeHtml(b.status)}${b.notes ? ` · ${escapeHtml(b.notes)}` : ""}</p>
+              ${actions}
+            </div>
+          `;
+        })
+        .join("");
+
+      listArea.querySelectorAll("[data-accept]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.accept, "accepted")));
+      listArea.querySelectorAll("[data-decline]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.decline, "declined")));
+      listArea.querySelectorAll("[data-cancel]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.cancel, "cancelled")));
+      listArea.querySelectorAll("[data-complete]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.complete, "completed")));
+    }
+
+    try {
+      await loadBookings();
+    } catch (err) {
+      console.error("Failed to load bookings:", err);
+      listArea.innerHTML = `<p>Something went wrong loading your bookings (${err.message || "unknown error"}). Try refreshing the page.</p>`;
     }
   }
 </script>
