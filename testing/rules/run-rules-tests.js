@@ -7,6 +7,7 @@ const {
   assertFails,
   assertSucceeds,
 } = require("@firebase/rules-unit-testing");
+const { serverTimestamp } = require("firebase/firestore");
 
 async function main() {
   const testEnv = await initializeTestEnvironment({
@@ -223,7 +224,31 @@ async function main() {
           .doc("amy_bob")
           .collection("messages")
           .doc("m1")
-          .set({ senderId: "amy", text: "hi" })
+          .set({ senderId: "amy", text: "hi", sentAt: serverTimestamp() })
+      );
+    }
+
+    // sentAt must be the real server timestamp — not omitted, and not a
+    // client-forged value — since onFirstMessageNotify orders by this field
+    // to find the chronologically-first message race-proof; a spoofable
+    // value would break that guarantee.
+    {
+      const db = testEnv.authenticatedContext("amy").firestore();
+      await assertFails(
+        db
+          .collection("conversations")
+          .doc("amy_bob")
+          .collection("messages")
+          .doc("m1-no-sentat")
+          .set({ senderId: "amy", text: "missing sentAt" })
+      );
+      await assertFails(
+        db
+          .collection("conversations")
+          .doc("amy_bob")
+          .collection("messages")
+          .doc("m1-forged-sentat")
+          .set({ senderId: "amy", text: "forged sentAt", sentAt: new Date("2020-01-01") })
       );
     }
 
@@ -240,7 +265,7 @@ async function main() {
           .doc("amy_bob")
           .collection("messages")
           .doc("m2")
-          .set({ senderId: "amy", text: "should be blocked" })
+          .set({ senderId: "amy", text: "should be blocked", sentAt: serverTimestamp() })
       );
     }
 
@@ -258,7 +283,7 @@ async function main() {
           .doc("zoe_adam")
           .collection("messages")
           .doc("m3")
-          .set({ senderId: "zoe", text: "should also be blocked" })
+          .set({ senderId: "zoe", text: "should also be blocked", sentAt: serverTimestamp() })
       );
     }
 

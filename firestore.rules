@@ -195,6 +195,12 @@ service cloud.firestore {
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 1000
+                      // Must be the server timestamp (FieldValue.serverTimestamp()
+                      // client-side), not a client-supplied value — onFirstMessageNotify
+                      // orders by this field to find the chronologically-first message
+                      // in a conversation race-proof; a spoofable/backdated value would
+                      // break that ordering guarantee.
+                      && request.resource.data.sentAt == request.time
                       // NOTE: must use isBlockedPair(), not exists(blocks/$(conversationId))
                       // directly — conversationId is the fixed "{ownerUid}_{walkerUid}" order,
                       // while blocks docs are keyed by the *sorted* pair (see isBlockedPair()

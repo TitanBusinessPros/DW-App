@@ -12,12 +12,13 @@
 //   - checkImageSafeSearch  — Cloud Vision moderation on users/walkerProfiles photo uploads only
 //                              (NOT dogs — dog profiles are private to the owner, see
 //                              firestore.rules), ported from Town-Talk/Town Fuss
+//   - onFirstMessageNotify  — push notification on the first message in a conversation,
+//                              ported from Town-Talk/Town Fuss
 //
 // Planned, adapted from patterns in a sibling Firebase project (see docs/ARCHITECTURE.md):
 //   - beforeSignInBlocking  — stamp a users/{uid} stub + lastKnownIp on first sign-in
 //   - onBookingRequested    — push notification to the walker on a new booking
 //   - onBookingStatusChange — push notification to the owner on accept/decline
-//   - onFirstMessageNotify  — push notification on the first message in a conversation
 //   - stripeWebhook         — mark walkerProfiles/{uid}.listingPaidUntil on payment
 //   - expireWalkerListings  — scheduled job to unpublish lapsed listings
 
@@ -346,6 +347,59 @@ exports.checkImageSafeSearch = onObjectFinalized({ bucket: "dw-app-2beee.firebas
     clickAction: "/dashboard.html",
   });
 });
+
+// Fires on every new message, but only actually sends a push if this is
+// the FIRST message ever created in that conversation — checking whether
+// THIS message is the chronologically-oldest one (via the sentAt field
+// firestore.rules now requires to be the real server timestamp), not a
+// live count(). A live count is racy: if a second and third message land
+// before this trigger actually runs, the count is already >1 and a
+// genuinely-first message gets wrongly skipped. Checking "am I the
+// oldest" is race-proof regardless of how many later messages already
+// exist by the time this runs. Ported from Town-Talk's version of the
+// same function.
+exports.onFirstMessageNotify = onDocumentCreated(
+  "conversations/{conversationId}/messages/{messageId}",
+  async (event) => {
+    const message = event.data?.data();
+    if (!message) return;
+    const { conversationId, messageId } = event.params;
+
+    const messagesRef = db.collection("conversations").doc(conversationId).collection("messages");
+    const oldestSnap = await messagesRef.orderBy("sentAt", "asc").limit(1).get();
+    if (oldestSnap.empty || oldestSnap.docs[0].id !== messageId) return; // not the first message — skip
+
+    const convoSnap = await db.collection("conversations").doc(conversationId).get();
+    if (!convoSnap.exists) return;
+    const convo = convoSnap.data();
+
+    const recipientUid = (convo.participants || []).find((uid) => uid !== message.senderId);
+    if (!recipientUid) return;
+
+    // Looks up the sender's display name via users/{uid} rather than
+    // trusting a client-supplied field (Town-Talk uses participantNames on
+    // the conversation doc itself; Dog Walker's conversations create rule
+    // doesn't validate/require any such field, so there's nothing to trust
+    // there) — one extra read, but nothing new to validate in rules.
+    let senderName = "Someone";
+    try {
+      const senderSnap = await db.collection("users").doc(message.senderId).get();
+      if (senderSnap.exists) senderName = senderSnap.data().profile?.name || senderName;
+    } catch {
+      // Fall back to the generic name rather than failing the notification.
+    }
+
+    // TODO: clickAction should point at a real conversation-scoped route
+    // once the messaging UI (Rover-parity item — see docs/ARCHITECTURE.md)
+    // actually exists; dashboard.html is the closest existing page today.
+    await sendPushToUser(recipientUid, {
+      type: "message",
+      title: "Dog Walker — New Message",
+      body: `${senderName} sent you a message for the first time.`,
+      clickAction: "/dashboard.html",
+    });
+  }
+);
 
 // Exposed only so testing/functions/ can unit-test this logic directly —
 // these are plain helper functions, not Cloud Functions, so Firebase's
