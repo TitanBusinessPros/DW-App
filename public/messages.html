@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages — Wooflahoma Walks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-badge">🐾</span>
+      <span class="logo-text">Wooflahoma Walks</span>
+    </a>
+    <div class="header-actions">
+      <a href="dashboard.html" class="btn btn-ghost">Back to dashboard</a>
+    </div>
+  </div>
+</header>
+
+<main class="auth-page">
+  <div class="auth-card" style="max-width:640px;" id="messagesCard">
+    <p>Loading…</p>
+  </div>
+</main>
+
+<script type="module">
+  import {
+    auth, db,
+    onAuthStateChanged, doc, getDoc, setDoc, updateDoc, collection, query,
+    where, getDocs, addDoc, onSnapshot, serverTimestamp,
+  } from "./firebase-init.js";
+
+  const card = document.getElementById("messagesCard");
+  let unsubscribeThread = null; // torn down on navigation away from a thread
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
+  // Doc ID is the two participant uids, sorted — matches firestore.rules'
+  // convention (see that file's comment on conversations/{conversationId}
+  // and isBlockedPair()), not an "ownerUid_walkerUid" fixed order — avoids
+  // needing to track who's the owner vs. walker for a given pair, which is
+  // ambiguous for a "both"-role user anyway.
+  function conversationIdFor(uidA, uidB) {
+    return uidA < uidB ? `${uidA}_${uidB}` : `${uidB}_${uidA}`;
+  }
+
+  async function nameFor(uid) {
+    const snap = await getDoc(doc(db, "users", uid));
+    return snap.exists() ? snap.data().profile?.name || "Someone" : "Someone";
+  }
+
+  function renderConversationList(items) {
+    if (items.length === 0) {
+      card.innerHTML = `<h1>Messages</h1><p>No conversations yet.</p>`;
+      return;
+    }
+    card.innerHTML =
+      `<h1>Messages</h1>` +
+      items
+        .map(
+          (c) => `
+            <a href="messages.html?with=${encodeURIComponent(c.counterpartUid)}" style="display:block; text-decoration:none; color:inherit;">
+              <div style="border-bottom: 1px solid var(--sage-100); padding: 14px 0;">
+                <strong>${escapeHtml(c.counterpartName)}</strong>
+              </div>
+            </a>
+          `
+        )
+        .join("");
+  }
+
+  async function showConversationList(uid) {
+    const snap = await getDocs(query(collection(db, "conversations"), where("participants", "array-contains", uid)));
+    const items = await Promise.all(
+      snap.docs.map(async (d) => {
+        const participants = d.data().participants || [];
+        const counterpartUid = participants.find((p) => p !== uid);
+        return { counterpartUid, counterpartName: await nameFor(counterpartUid) };
+      })
+    );
+    renderConversationList(items);
+  }
+
+  async function showThread(myUid, otherUid) {
+    const otherSnap = await getDoc(doc(db, "users", otherUid));
+    if (!otherSnap.exists()) {
+      card.innerHTML = `<h1>Not found</h1><p>That user doesn't exist. <a href="messages.html">Back to messages</a></p>`;
+      return;
+    }
+    const otherName = otherSnap.data().profile?.name || "Someone";
+    const conversationId = conversationIdFor(myUid, otherUid);
+
+    // Always upsert the conversation doc, unconditionally — deliberately
+    // NOT "read first, create only if missing": firestore.rules' read rule
+    // requires already being a listed participant of the EXISTING doc,
+    // which is unsatisfiable for a conversation that doesn't exist yet (an
+    // unavoidable chicken-and-egg case, not just an edge case to guard).
+    // A merge write with the SAME deterministically-sorted participants
+    // array is a true no-op against an existing conversation (an unchanged
+    // field never shows up in diff().affectedKeys()), and satisfies the
+    // create rule for a brand-new one — one code path handles both.
+    const participants = myUid < otherUid ? [myUid, otherUid] : [otherUid, myUid];
+    const convoRef = doc(db, "conversations", conversationId);
+    await setDoc(convoRef, { participants }, { merge: true });
+
+    card.innerHTML = `
+      <h1>${escapeHtml(otherName)}</h1>
+      <div id="threadMessages" style="max-height:400px; overflow-y:auto; margin-bottom:16px; text-align:left;"></div>
+      <div id="threadError" class="form-error"></div>
+      <form id="threadForm" style="display:flex; gap:8px;">
+        <input type="text" id="messageText" maxlength="1000" placeholder="Type a message…" required style="flex:1; padding:12px 14px; border:2px solid var(--sage-200); border-radius:12px; font:inherit;">
+        <button type="submit" class="btn btn-primary">Send</button>
+      </form>
+      <p class="auth-footer-link"><a href="messages.html">← All conversations</a></p>
+    `;
+
+    const messagesArea = document.getElementById("threadMessages");
+    const messagesRef = collection(db, "conversations", conversationId, "messages");
+
+    if (unsubscribeThread) unsubscribeThread();
+    unsubscribeThread = onSnapshot(messagesRef, (snap) => {
+      const msgs = snap.docs
+        .map((d) => d.data())
+        .sort((a, b) => (a.sentAt?.seconds || 0) - (b.sentAt?.seconds || 0));
+      messagesArea.innerHTML = msgs
+        .map(
+          (m) => `
+            <p style="margin:0 0 8px; ${m.senderId === myUid ? "text-align:right;" : ""}">
+              <span style="display:inline-block; background:${m.senderId === myUid ? "var(--brown-100)" : "var(--sage-100)"}; padding:8px 12px; border-radius:12px; max-width:80%;">
+                ${escapeHtml(m.text)}
+              </span>
+            </p>
+          `
+        )
+        .join("");
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+    });
+
+    document.getElementById("threadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById("threadError");
+      errorBox.classList.remove("visible");
+      const input = document.getElementById("messageText");
+      const text = input.value.trim();
+      if (!text) return;
+
+      try {
+        await addDoc(messagesRef, { senderId: myUid, text, sentAt: serverTimestamp() });
+        await updateDoc(convoRef, { lastMessageAt: serverTimestamp() });
+        input.value = "";
+      } catch (err) {
+        console.error("Failed to send message:", err);
+        errorBox.textContent =
+          "Couldn't send that — you may not be able to message this person.";
+        errorBox.classList.add("visible");
+      }
+    });
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      location.href = "login.html";
+      return;
+    }
+
+    try {
+      const ownSnap = await getDoc(doc(db, "users", user.uid));
+      if (!ownSnap.exists() || !ownSnap.data()?.profile?.name) {
+        location.href = "signup.html";
+        return;
+      }
+      if (!ownSnap.data().approved) {
+        card.innerHTML = `<h1>Not yet</h1><p>Your account needs to be approved before you can message anyone. <a href="dashboard.html">Back to dashboard</a></p>`;
+        return;
+      }
+
+      const otherUid = new URLSearchParams(location.search).get("with");
+      if (otherUid) {
+        await showThread(user.uid, otherUid);
+      } else {
+        await showConversationList(user.uid);
+      }
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+      card.innerHTML = `
+        <h1>Something went wrong</h1>
+        <p>We couldn't load your messages (${err.message || "unknown error"}). Try refreshing the page.</p>
+      `;
+    }
+  });
+</script>
+
+</body>
+</html>

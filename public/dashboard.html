@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<div class="dev-banner">🚧 In development — messaging isn't built yet.</div>
+<div class="dev-banner">🚧 In development — payments (Stripe) aren't built yet.</div>
 
 <header class="site-header">
   <div class="container header-inner">
@@ -490,14 +490,21 @@
       }
 
       // Counterpart's name via a per-doc users/{uid} read, same reasoning
-      // as browse.html: no denormalized name to go stale.
+      // as browse.html: no denormalized name to go stale. Completed
+      // bookings I own also get a review-existence check (reviews/{bookingId}
+      // — same doc ID as the booking, see firestore.rules) to decide
+      // whether to show "Leave a Review" or "Reviewed".
       const named = await Promise.all(
         bookings.map(async (b) => {
           const isMineAsOwner = b.ownerId === uid;
           const counterpartUid = isMineAsOwner ? b.walkerId : b.ownerId;
           const counterpartSnap = await getDoc(doc(db, "users", counterpartUid));
           const counterpartName = counterpartSnap.exists() ? counterpartSnap.data().profile?.name || "Someone" : "Someone";
-          return { ...b, isMineAsOwner, counterpartName };
+          let alreadyReviewed = false;
+          if (isMineAsOwner && b.status === "completed") {
+            alreadyReviewed = (await getDoc(doc(db, "reviews", b.id))).exists();
+          }
+          return { ...b, isMineAsOwner, counterpartUid, counterpartName, alreadyReviewed };
         })
       );
 
@@ -517,20 +524,90 @@
               <button class="btn btn-ghost" data-cancel="${b.id}" style="padding:6px 14px;">Cancel</button>
             `;
           }
+
+          let reviewArea = "";
+          if (b.isMineAsOwner && b.status === "completed") {
+            reviewArea = b.alreadyReviewed
+              ? `<p style="margin:6px 0 0; color: var(--sage-600);">✅ Reviewed</p>`
+              : `<div data-review-area="${b.id}"><button class="btn btn-ghost" data-review-btn="${b.id}" style="padding:6px 14px; margin-top:6px;">Leave a Review</button></div>`;
+          }
+
           return `
             <div data-booking-row="${b.id}" style="border-bottom: 1px solid var(--sage-100); padding: 12px 0;">
               <p style="margin:0 0 4px;"><strong>${escapeHtml(b.counterpartName)}</strong> — ${b.isMineAsOwner ? "your walker" : "wants you to walk their dog"}</p>
               <p style="margin:0 0 8px;">${statusBadgeHtml(b.status)}${b.notes ? ` · ${escapeHtml(b.notes)}` : ""}</p>
               ${actions}
+              <a href="messages.html?with=${encodeURIComponent(b.counterpartUid)}" class="btn btn-ghost" style="padding:6px 14px; margin-top:6px; display:inline-block;">Message</a>
+              ${reviewArea}
             </div>
           `;
         })
         .join("");
 
+      function reviewFormHtml(bookingId) {
+        return `
+          <div class="form-group" style="margin-top:8px;">
+            <label for="rating-${bookingId}">Rating</label>
+            <select id="rating-${bookingId}">
+              <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+              <option value="4">⭐⭐⭐⭐ (4)</option>
+              <option value="3">⭐⭐⭐ (3)</option>
+              <option value="2">⭐⭐ (2)</option>
+              <option value="1">⭐ (1)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="comment-${bookingId}">Comment (optional)</label>
+            <textarea id="comment-${bookingId}" maxlength="500"></textarea>
+          </div>
+          <div id="reviewError-${bookingId}" class="form-error"></div>
+          <button class="btn btn-primary" data-send-review="${bookingId}" style="padding:6px 14px;">Submit Review</button>
+        `;
+      }
+
+      async function submitReview(bookingId, walkerId) {
+        const errorBox = document.getElementById(`reviewError-${bookingId}`);
+        errorBox.classList.remove("visible");
+        const sendBtn = listArea.querySelector(`[data-send-review="${bookingId}"]`);
+        sendBtn.disabled = true;
+        sendBtn.textContent = "Submitting…";
+
+        try {
+          const rating = Number(document.getElementById(`rating-${bookingId}`).value);
+          const comment = document.getElementById(`comment-${bookingId}`).value.trim();
+          await setDoc(doc(db, "reviews", bookingId), {
+            reviewerId: uid,
+            walkerId,
+            rating,
+            comment,
+            createdAt: serverTimestamp(),
+          });
+          await loadBookings();
+        } catch (err) {
+          console.error("Failed to submit review:", err);
+          errorBox.textContent = "Something went wrong submitting your review. Please try again.";
+          errorBox.classList.add("visible");
+          sendBtn.disabled = false;
+          sendBtn.textContent = "Submit Review";
+        }
+      }
+
       listArea.querySelectorAll("[data-accept]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.accept, "accepted")));
       listArea.querySelectorAll("[data-decline]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.decline, "declined")));
       listArea.querySelectorAll("[data-cancel]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.cancel, "cancelled")));
       listArea.querySelectorAll("[data-complete]").forEach((btn) => btn.addEventListener("click", () => actOn(btn.dataset.complete, "completed")));
+      // data-send-review doesn't exist yet at this point — reviewFormHtml()
+      // is only injected once "Leave a Review" is clicked, so its submit
+      // button is bound directly at that moment instead (below), not here.
+      listArea.querySelectorAll("[data-review-btn]").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const bookingId = btn.dataset.reviewBtn;
+          const area = listArea.querySelector(`[data-review-area="${bookingId}"]`);
+          area.innerHTML = reviewFormHtml(bookingId);
+          const walkerId = named.find((nb) => nb.id === bookingId)?.walkerId;
+          area.querySelector("[data-send-review]").addEventListener("click", () => submitReview(bookingId, walkerId));
+        })
+      );
     }
 
     try {

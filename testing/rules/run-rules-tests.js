@@ -215,6 +215,57 @@ async function main() {
       }
     });
 
+    // --- conversations/{conversationId} create/update -------------------------
+    {
+      const amyDb = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(
+        amyDb.collection("conversations").doc("amy_bob").set({ participants: ["amy", "bob"] })
+      );
+      // Can't create a conversation you're not actually part of.
+      await assertFails(
+        amyDb.collection("conversations").doc("bob_zoe").set({ participants: ["bob", "zoe"] })
+      );
+      // Participants must be exactly 2.
+      await assertFails(
+        amyDb.collection("conversations").doc("amy_bob_zoe").set({ participants: ["amy", "bob", "zoe"] })
+      );
+
+      // A participant can update bookkeeping fields (lastMessageAt)...
+      await assertSucceeds(
+        amyDb.collection("conversations").doc("amy_bob").update({ lastMessageAt: serverTimestamp() })
+      );
+      // ...but can't rewrite who the other participant is, even while
+      // still including themselves.
+      await assertFails(
+        amyDb.collection("conversations").doc("amy_bob").update({ participants: ["amy", "someone-else"] })
+      );
+      // Someone who isn't a participant at all can't update it either.
+      const zoeDb = testEnv.authenticatedContext("zoe").firestore();
+      await assertFails(
+        zoeDb.collection("conversations").doc("amy_bob").update({ lastMessageAt: serverTimestamp() })
+      );
+
+      // Reading a conversation that doesn't exist yet fails cleanly (not a
+      // rules-evaluation crash) — real bug this caught: the read rule used
+      // to dereference resource.data.participants with no exists() guard,
+      // which throws instead of denying when resource.data is null for a
+      // nonexistent doc. messages.html deliberately never reads a
+      // conversation before writing it (see that file) specifically to
+      // avoid ever hitting this path in practice, but the rule itself
+      // must still fail safely if something else ever does.
+      await assertFails(amyDb.collection("conversations").doc("brand-new-nobody-made-yet").get());
+
+      // The upsert messages.html actually performs — merge-writing the
+      // SAME deterministically-sorted participants array — succeeds both
+      // as a fresh create AND as a idempotent no-op against an existing doc.
+      await assertSucceeds(
+        amyDb.collection("conversations").doc("amy_henry").set({ participants: ["amy", "henry"] }, { merge: true })
+      );
+      await assertSucceeds(
+        amyDb.collection("conversations").doc("amy_henry").set({ participants: ["amy", "henry"] }, { merge: true })
+      );
+    }
+
     // Sanity: an unblocked, approved pair can message each other.
     {
       const db = testEnv.authenticatedContext("amy").firestore();
@@ -374,12 +425,38 @@ async function main() {
       await assertSucceeds(henryDb.collection("bookings").doc("b9").update({ status: "completed" }));
     }
 
-    // --- reviews/{reviewId} ----------------------------------------------------
+    // --- reviews/{bookingId} -----------------------------------------------------
+    // Doc ID is the bookingId — b9 (amy owner, henry walker) was marked
+    // "completed" earlier in the bookings transition tests above.
     {
-      const db = testEnv.authenticatedContext("amy").firestore();
-      await assertSucceeds(db.collection("reviews").doc("r1").set({ reviewerId: "amy", rating: 5 }));
-      // Rating must be 1-5.
-      await assertFails(db.collection("reviews").doc("r2").set({ reviewerId: "amy", rating: 6 }));
+      const amyDb = testEnv.authenticatedContext("amy").firestore();
+      await assertSucceeds(
+        amyDb.collection("reviews").doc("b9").set({ reviewerId: "amy", walkerId: "henry", rating: 5 })
+      );
+      // Can't review the same booking twice — Firestore treats a second
+      // .set() on the now-existing doc as an update, not a create, and
+      // update is admin-only.
+      await assertFails(
+        amyDb.collection("reviews").doc("b9").set({ reviewerId: "amy", walkerId: "henry", rating: 3 })
+      );
+      // Rating must be 1-5 (on a fresh, not-yet-reviewed completed booking).
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection("bookings").doc("b10").set({ ownerId: "amy", walkerId: "henry", status: "completed" });
+      });
+      await assertFails(
+        amyDb.collection("reviews").doc("b10").set({ reviewerId: "amy", walkerId: "henry", rating: 6 })
+      );
+      // Can't review a booking that isn't completed yet (b7 was cancelled,
+      // not completed, in the transition tests above).
+      await assertFails(
+        amyDb.collection("reviews").doc("b7").set({ reviewerId: "amy", walkerId: "henry", rating: 5 })
+      );
+      // Can't review a booking you weren't the OWNER on — henry was the
+      // walker on b10, not the owner.
+      const henryDb = testEnv.authenticatedContext("henry").firestore();
+      await assertFails(
+        henryDb.collection("reviews").doc("b10").set({ reviewerId: "henry", walkerId: "henry", rating: 5 })
+      );
     }
 
     // --- reports/{reportId} ------------------------------------------------------

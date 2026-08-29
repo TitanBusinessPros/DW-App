@@ -196,13 +196,43 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
-    // conversations/{ownerUid}_{walkerUid} — 1:1 DMs.
+    // conversations/{conversationId} — 1:1 DMs. Doc ID is the two
+    // participant uids, sorted (uidA < uidB ? A_B : B_A) — same convention
+    // isBlockedPair() already uses elsewhere in this file. The messages
+    // subcollection rules below only check conversationId.split('_')
+    // membership, not the owner/walker roles specifically, so there's no
+    // need to track "who's the owner" for a given pair (which gets
+    // ambiguous for a "both"-role user anyway) — any sorted pair works.
     // ---------------------------------------------------------------------
     match /conversations/{conversationId} {
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
-      allow create, update: if isSignedIn()
-                            && request.auth.uid in request.resource.data.participants
-                            && request.resource.data.participants.size() == 2;
+      // get and list split apart (rather than one combined "read") because
+      // they need different null-safety: a direct get() can target a
+      // conversation that doesn't exist yet (messages.html's own upsert
+      // logic works this way — see that file), where resource.data is null
+      // and dereferencing .participants on it throws a rules evaluation
+      // error instead of cleanly denying, so exists() must be checked
+      // first. A list (query) only ever evaluates this rule against
+      // documents the query's own filter actually matched — reference
+      // that same conversationId's isolated existence again — Firestore was
+      // reproducibly (verified live, not just suspected) unable to satisfy
+      // list here, throwing the exact "Null value error" — so list is
+      // exempted from the exists() guard, safe because a matched doc is by
+      // definition already an existing one.
+      allow get: if isSignedIn()
+                 && exists(/databases/$(database)/documents/conversations/$(conversationId))
+                 && request.auth.uid in resource.data.participants;
+      allow list: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn()
+                    && request.auth.uid in request.resource.data.participants
+                    && request.resource.data.participants.size() == 2;
+      // participants is immutable after create — only bookkeeping fields
+      // move. Without this, either participant could silently rewrite who
+      // the OTHER participant is (only their own uid being present was
+      // ever checked, not that the doc's participants stayed the same).
+      allow update: if isSignedIn()
+                    && request.auth.uid in resource.data.participants
+                    && request.resource.data.participants == resource.data.participants
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt']);
 
       match /messages/{messageId} {
         allow read: if isSignedIn() && request.auth.uid in conversationId.split('_');
@@ -256,15 +286,28 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
-    // reviews/{reviewId} — one review per completed booking, by the owner.
+    // reviews/{bookingId} — one review per completed booking, by the
+    // owner. Doc ID is the bookingId itself (not an arbitrary reviewId) —
+    // same natural-key pattern as conversations/{sortedPair} and
+    // blocks/{pairId} elsewhere in this file — which is what actually
+    // makes "one review per booking" enforceable at all: a second create
+    // attempt at the same ID is just a create on an existing doc, which
+    // Firestore rejects before rules even run, and update is admin-only.
+    // Previously this only validated rating shape — reviewerId/rating
+    // being present said nothing about the review being real (tied to an
+    // actual completed booking with that specific walker); tightened to
+    // that while building the actual reviews UI (Rover-parity item).
     // ---------------------------------------------------------------------
-    match /reviews/{reviewId} {
+    match /reviews/{bookingId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
                     && request.resource.data.reviewerId == request.auth.uid
                     && request.resource.data.rating is int
                     && request.resource.data.rating >= 1
-                    && request.resource.data.rating <= 5;
+                    && request.resource.data.rating <= 5
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.ownerId == request.auth.uid
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.walkerId == request.resource.data.walkerId
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.status == 'completed';
       allow update, delete: if isAdmin();
     }
 

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Walker Profile — Wooflahoma Walks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-badge">🐾</span>
+      <span class="logo-text">Wooflahoma Walks</span>
+    </a>
+    <div class="header-actions">
+      <a href="browse.html" class="btn btn-ghost">Back to walkers</a>
+    </div>
+  </div>
+</header>
+
+<main class="auth-page">
+  <div class="auth-card" style="max-width:640px;" id="walkerCard">
+    <p>Loading…</p>
+  </div>
+</main>
+
+<script type="module">
+  import {
+    auth, db,
+    onAuthStateChanged, doc, getDoc, collection, query, where, getDocs,
+  } from "./firebase-init.js";
+
+  const card = document.getElementById("walkerCard");
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
+  function stars(rating) {
+    return "⭐".repeat(Math.round(rating));
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      location.href = "login.html";
+      return;
+    }
+
+    const walkerUid = new URLSearchParams(location.search).get("uid");
+    if (!walkerUid) {
+      card.innerHTML = `<h1>Not found</h1><p>No walker specified. <a href="browse.html">Back to walkers</a></p>`;
+      return;
+    }
+
+    try {
+      const [userSnap, listingSnap, reviewsSnap] = await Promise.all([
+        getDoc(doc(db, "users", walkerUid)),
+        getDoc(doc(db, "walkerProfiles", walkerUid)),
+        getDocs(query(collection(db, "reviews"), where("walkerId", "==", walkerUid))),
+      ]);
+
+      if (!userSnap.exists() || !listingSnap.exists() || !listingSnap.data().approved) {
+        card.innerHTML = `<h1>Not found</h1><p>That walker doesn't have a public listing. <a href="browse.html">Back to walkers</a></p>`;
+        return;
+      }
+
+      const name = userSnap.data().profile?.name || "A walker";
+      const listing = listingSnap.data();
+      const reviews = reviewsSnap.docs.map((d) => d.data());
+      const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : null;
+
+      // Reviewer names via a per-review users/{uid} read — same
+      // no-denormalized-name-to-go-stale reasoning as browse.html and
+      // dashboard.html's bookings section.
+      const namedReviews = await Promise.all(
+        reviews.map(async (r) => {
+          const reviewerSnap = await getDoc(doc(db, "users", r.reviewerId));
+          const reviewerName = reviewerSnap.exists() ? reviewerSnap.data().profile?.name || "Someone" : "Someone";
+          return { ...r, reviewerName };
+        })
+      );
+
+      const photo = listing.photo
+        ? `<img src="${escapeHtml(listing.photo)}" alt="${escapeHtml(name)}" style="width:100%; max-height:280px; object-fit:cover; border-radius:12px; margin-bottom:16px;">`
+        : "";
+
+      const reviewsHtml =
+        namedReviews.length === 0
+          ? `<p>No reviews yet.</p>`
+          : namedReviews
+              .map(
+                (r) => `
+                  <div style="border-top: 1px solid var(--sage-100); padding: 12px 0; text-align:left;">
+                    <p style="margin:0 0 4px;"><strong>${escapeHtml(r.reviewerName)}</strong> — ${stars(r.rating)}</p>
+                    ${r.comment ? `<p style="margin:0;">${escapeHtml(r.comment)}</p>` : ""}
+                  </div>
+                `
+              )
+              .join("");
+
+      card.innerHTML = `
+        ${photo}
+        <h1 style="margin:0 0 4px;">${escapeHtml(name)}</h1>
+        <p class="auth-subtitle" style="margin:0 0 10px;">$${escapeHtml(listing.hourlyRate)}/hr · within ${escapeHtml(listing.serviceRadius)} mi · ${escapeHtml(listing.availability)}</p>
+        <p style="margin:0 0 16px;">
+          ${avgRating !== null ? `${stars(avgRating)} ${avgRating.toFixed(1)} (${reviews.length} review${reviews.length === 1 ? "" : "s"})` : "No reviews yet"}
+        </p>
+        <p style="margin:0 0 20px; text-align:left;">${escapeHtml(listing.bio)}</p>
+        <div style="display:flex; gap:8px; margin-bottom:20px;">
+          <a href="browse.html" class="btn btn-primary">Request a Walk</a>
+          <a href="messages.html?with=${encodeURIComponent(walkerUid)}" class="btn btn-ghost">Message</a>
+        </div>
+        <h2 style="text-align:left; margin-bottom:8px;">Reviews</h2>
+        ${reviewsHtml}
+      `;
+    } catch (err) {
+      console.error("Failed to load walker profile:", err);
+      card.innerHTML = `
+        <h1>Something went wrong</h1>
+        <p>We couldn't load this walker's profile (${err.message || "unknown error"}). Try refreshing the page.</p>
+      `;
+    }
+  });
+</script>
+
+</body>
+</html>

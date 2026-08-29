@@ -163,6 +163,10 @@ test("either party can mark an accepted booking complete", async ({ browser }) =
   await signInThenGoTo(page, ownerToken, "/dashboard.html");
   await page.click('[data-complete]');
   await expect(page.locator('[data-booking-row] .status-badge')).toContainText("Completed");
-  await expect(page.locator('[data-booking-row] button')).toHaveCount(0);
+  // No accept/decline/cancel/complete actions remain — completed is
+  // terminal — but the owner now sees a "Leave a Review" button (added
+  // when the reviews feature was built), not zero buttons.
+  await expect(page.locator('[data-booking-row] [data-accept], [data-booking-row] [data-decline], [data-booking-row] [data-cancel], [data-booking-row] [data-complete]')).toHaveCount(0);
+  await expect(page.locator('[data-booking-row] [data-review-btn]')).toBeVisible();
   await ctx.close();
 });

@@ -52,12 +52,13 @@
     return `
       <div class="auth-card" style="max-width:100%; margin-bottom:16px; text-align:left;" data-walker-card="${escapeHtml(listing.uid)}">
         ${photo}
-        <h2 style="margin:0 0 4px;">${escapeHtml(name)}</h2>
+        <h2 style="margin:0 0 4px;"><a href="walker.html?uid=${encodeURIComponent(listing.uid)}" style="color:inherit;">${escapeHtml(name)}</a></h2>
         <p class="auth-subtitle" style="margin:0 0 10px;">$${escapeHtml(listing.hourlyRate)}/hr · within ${escapeHtml(listing.serviceRadius)} mi · ${escapeHtml(listing.availability)}</p>
         <p style="margin:0 0 14px;">${escapeHtml(listing.bio)}</p>
         <div data-request-area>
           <button class="btn btn-primary" data-request-btn="${escapeHtml(listing.uid)}">Request a Walk</button>
         </div>
+        <a href="messages.html?with=${encodeURIComponent(listing.uid)}" class="btn btn-ghost" style="margin-top:8px; display:inline-block;">Message</a>
       </div>
     `;
   }
