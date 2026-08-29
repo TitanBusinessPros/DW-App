@@ -75,23 +75,48 @@
     if (user.uid === lastHandledUid) return;
     lastHandledUid = user.uid;
 
+    // Admin status is checked FIRST and independently of the regular
+    // owner/walker profile below — an admin is purely someone on the
+    // admins/{email} allowlist (see docs/ARCHITECTURE.md) and was never
+    // required to also have a completed regular profile. Redirecting an
+    // incomplete-profile user to signup.html (below) must not apply to an
+    // admin just because they don't happen to have one.
+    let isAdminUser = false;
+    try {
+      if (user.email) {
+        const adminSnap = await withTimeout(getDoc(doc(db, "admins", user.email)), "Admin check timed out.");
+        isAdminUser = adminSnap.exists();
+      }
+    } catch (err) {
+      console.error("Admin allowlist check failed:", err);
+    }
+
     try {
       const snap = await withTimeout(getDoc(doc(db, "users", user.uid)), "Loading your profile timed out.");
-      if (!snap.exists()) {
-        card.innerHTML = `<h1>Welcome!</h1><p>We couldn't find a profile for your account yet. Try signing up again.</p>`;
+      // No doc, or a doc that never finished the profile step (see
+      // signup.html) — send a regular (non-admin) user to finish onboarding
+      // rather than showing a dead-end message here. An admin without a
+      // regular profile still gets the admin panel below, so just show a
+      // light note instead of redirecting them away from it.
+      if (!snap.exists() || !snap.data()?.profile?.name) {
+        if (!isAdminUser) {
+          location.href = "signup.html";
+          return;
+        }
+        card.innerHTML = `<h1>Welcome!</h1><p>You don't have a regular profile yet — the admin panel below is still available.</p>`;
       } else {
-        const profile = snap.data();
-        const statusBadge = profile.approved
+        const userData = snap.data();
+        const statusBadge = userData.approved
           ? `<span class="status-badge status-badge--approved">✅ Approved</span>`
           : `<span class="status-badge status-badge--pending">⏳ Pending review</span>`;
-        const roleLabel = { owner: "Dog Owner", walker: "Dog Walker", both: "Dog Owner & Walker" }[profile.role] || profile.role;
+        const roleLabel = { owner: "Dog Owner", walker: "Dog Walker", both: "Dog Owner & Walker" }[userData.role] || userData.role;
 
         card.innerHTML = `
-          <h1>Hey, ${profile.displayName || user.email}! 👋</h1>
+          <h1>Hey, ${userData.profile.name || user.email}! 👋</h1>
           <p class="auth-subtitle">${roleLabel}</p>
           <div style="text-align:center; margin-bottom: 24px;">${statusBadge}</div>
           <p style="text-align:center;">
-            ${profile.approved
+            ${userData.approved
               ? "Your profile is approved! Browsing walkers and booking isn't built yet, but it's next."
               : "Your profile is waiting on admin review. We'll notify you once it's approved — this app doesn't auto-approve yet."}
           </p>
@@ -105,21 +130,7 @@
       `;
     }
 
-    // Real auth check via Firestore rules (isSignedIn() && token.email ==
-    // the doc id) — this is what actually decides whether the section
-    // below gets created at all, not anything client-side. Guarded
-    // separately so a failure here can't affect the profile card above,
-    // which has already rendered by this point either way.
-    try {
-      if (user.email) {
-        const adminSnap = await withTimeout(getDoc(doc(db, "admins", user.email)), "Admin check timed out.");
-        if (adminSnap.exists()) {
-          mountAdminSection(user.uid);
-        }
-      }
-    } catch (err) {
-      console.error("Admin allowlist check failed:", err);
-    }
+    if (isAdminUser) mountAdminSection(user.uid);
   });
 
   document.getElementById("logoutBtn").addEventListener("click", async () => {
@@ -228,7 +239,7 @@
             <tbody>
               ${pending.map((p) => `
                 <tr id="row-${p.id}" style="border-bottom: 1px solid var(--sage-100);">
-                  <td style="padding:8px;">${p.displayName || "(no name)"}</td>
+                  <td style="padding:8px;">${p.profile?.name || "(no name)"}</td>
                   <td style="padding:8px;">${roleLabel(p.role)}</td>
                   <td style="padding:8px;">${p.townId || "—"}</td>
                   <td style="padding:8px;">${p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString() : "—"}</td>

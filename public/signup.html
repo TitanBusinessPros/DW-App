@@ -21,13 +21,54 @@
 </header>
 
 <main class="auth-page">
-  <div class="auth-card">
+
+  <!-- Step 1: Google sign-in only — no email/password account is ever
+       created (confirmed with the user: Google Sign-In only, no email
+       signup path at all). -->
+  <div class="auth-card" id="stepGoogle">
     <h1>Create your account</h1>
+    <p class="auth-subtitle">Oklahoma only, for now.</p>
+    <div id="googleError" class="form-error"></div>
+    <button id="googleBtn" class="btn btn-google btn-block">
+      <span>🔵</span> Continue with Google
+    </button>
+    <p class="auth-footer-link">Already have an account? <a href="login.html">Log in</a></p>
+  </div>
+
+  <!-- Step 2: terms + 18+ confirmation, shown once signed in but before a
+       profile exists. Confirmed with the user: this is its own distinct
+       step before profile creation, not merged into the same form. -->
+  <div class="auth-card" id="stepTerms" style="display:none;">
+    <h1>Before you continue</h1>
+    <p class="auth-subtitle">Two quick confirmations, then we'll set up your profile.</p>
+    <div id="termsError" class="form-error"></div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="confirmAge">
+      <span>I confirm I am 18 years of age or older.</span>
+    </label>
+    <!-- Terms/Privacy Policy text doesn't exist yet — deliberately deferred
+         to be written at the very end of the project, alongside Stripe.
+         These links are placeholders until then. -->
+    <label class="checkbox-row">
+      <input type="checkbox" id="agreeTerms">
+      <span>I agree to the <a href="#" id="termsLink">Terms of Service</a> and <a href="#" id="privacyLink">Privacy Policy</a> (coming soon).</span>
+    </label>
+
+    <button id="continueFromTermsBtn" class="btn btn-primary btn-block">Continue</button>
+  </div>
+
+  <!-- Step 3: profile creation. This single write is what actually
+       creates users/{uid} — role/townId/approved/everApproved are all
+       required together by firestore.rules, so nothing is written before
+       this point. -->
+  <div class="auth-card" id="stepProfile" style="display:none;">
+    <h1>Create your profile</h1>
     <p class="auth-subtitle">Oklahoma only, for now — every town on the list below is one we serve.</p>
 
-    <div id="formError" class="form-error"></div>
+    <div id="profileError" class="form-error"></div>
 
-    <form id="signupForm">
+    <form id="profileForm">
       <div class="form-group">
         <label for="displayName">Your name</label>
         <input type="text" id="displayName" required autocomplete="name">
@@ -59,56 +100,43 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" required autocomplete="email">
-      </div>
-
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" required minlength="6" autocomplete="new-password">
-        <p class="form-hint">At least 6 characters.</p>
-      </div>
-
-      <label class="checkbox-row">
-        <input type="checkbox" id="agreeTerms" required>
-        <span>I agree to the Terms of Service and confirm I live in Oklahoma.</span>
-      </label>
-
-      <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Create Account</button>
+      <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Create Profile</button>
     </form>
-
-    <div class="divider">or</div>
-
-    <button id="googleBtn" class="btn btn-google btn-block">
-      <span>🔵</span> Continue with Google
-    </button>
-
-    <p class="auth-footer-link">Already have an account? <a href="login.html">Log in</a></p>
   </div>
+
 </main>
 
 <script type="module">
   import {
     auth, db,
-    onAuthStateChanged, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider,
+    onAuthStateChanged, signInWithPopup, GoogleAuthProvider,
     doc, setDoc, getDoc, serverTimestamp,
   } from "./firebase-init.js";
 
   const params = new URLSearchParams(location.search);
   const preselectRole = params.get("role");
-  if (preselectRole) {
-    const radio = document.querySelector(`input[name="role"][value="${preselectRole}"]`);
-    if (radio) radio.checked = true;
+
+  const stepGoogle = document.getElementById("stepGoogle");
+  const stepTerms = document.getElementById("stepTerms");
+  const stepProfile = document.getElementById("stepProfile");
+
+  function showStep(step) {
+    for (const s of [stepGoogle, stepTerms, stepProfile]) s.style.display = "none";
+    step.style.display = "block";
   }
 
-  const errorBox = document.getElementById("formError");
-  function showError(msg) {
-    errorBox.textContent = msg;
-    errorBox.classList.add("visible");
+  function showError(step, msg) {
+    const box = document.getElementById(
+      step === stepGoogle ? "googleError" : step === stepTerms ? "termsError" : "profileError"
+    );
+    box.textContent = msg;
+    box.classList.add("visible");
   }
-  function clearError() {
-    errorBox.classList.remove("visible");
+  function clearError(step) {
+    const box = document.getElementById(
+      step === stepGoogle ? "googleError" : step === stepTerms ? "termsError" : "profileError"
+    );
+    box.classList.remove("visible");
   }
 
   // Populate the town dropdown from the static Oklahoma town list that
@@ -150,11 +178,12 @@
     return Math.max(10, Math.round(population * 0.01));
   }
 
-  // Firestore's towns/{townId} doc is just a live walker-cap counter —
-  // it only needs to exist once someone actually signs up from that town.
-  // Create it here, seeded from the static list, the first time it's used.
-  // Rules only allow *creating* a fresh doc, never overwriting an existing
-  // one, so this is safe to call on every signup without clobbering counts.
+  // Firestore's towns/{townId} doc is just a live walker-cap counter — it
+  // only needs to exist once someone actually signs up from that town.
+  // Create it here, seeded from the static list, the first time it's
+  // used. Rules only allow *creating* a fresh doc, never overwriting an
+  // existing one, so this is safe to call on every signup without
+  // clobbering counts.
   async function ensureTownDoc(townId) {
     const ref = doc(db, "towns", townId);
     const existing = await getDoc(ref);
@@ -170,88 +199,108 @@
     });
   }
 
-  async function createProfileDoc(uid) {
-    const existing = await getDoc(doc(db, "users", uid));
-    if (existing.exists()) return; // already has a profile — don't clobber it
-    const role = document.querySelector('input[name="role"]:checked').value;
-    const townId = townSelect.value;
-    await ensureTownDoc(townId);
-    await setDoc(doc(db, "users", uid), {
-      displayName: document.getElementById("displayName").value.trim(),
-      role,
-      townId,
-      approved: false,
-      everApproved: false,
-      agreedToTerms: true,
-      agreedToTermsAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-      lastActiveAt: serverTimestamp(),
-    });
+  function friendlyAuthError(err) {
+    const code = err?.code || "";
+    if (code.includes("popup-closed-by-user")) return "Google sign-in was closed before finishing.";
+    return "Something went wrong signing in with Google. Please try again.";
   }
 
-  function validateBeforeSubmit() {
-    if (!townSelect.value) {
-      showError("Please select your town.");
-      return false;
+  document.getElementById("googleBtn").addEventListener("click", async () => {
+    clearError(stepGoogle);
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      // onAuthStateChanged below decides what to show next.
+    } catch (err) {
+      showError(stepGoogle, friendlyAuthError(err));
+    }
+  });
+
+  document.getElementById("continueFromTermsBtn").addEventListener("click", () => {
+    clearError(stepTerms);
+    if (!document.getElementById("confirmAge").checked) {
+      showError(stepTerms, "You need to confirm you're 18 or older to continue.");
+      return;
     }
     if (!document.getElementById("agreeTerms").checked) {
-      showError("You need to agree to the terms to continue.");
-      return false;
+      showError(stepTerms, "You need to agree to the Terms of Service and Privacy Policy to continue.");
+      return;
     }
-    return true;
-  }
+    showStep(stepProfile);
+  });
 
-  document.getElementById("signupForm").addEventListener("submit", async (e) => {
+  document.getElementById("profileForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    clearError();
-    if (!validateBeforeSubmit()) return;
+    clearError(stepProfile);
+    if (!townSelect.value) {
+      showError(stepProfile, "Please select your town.");
+      return;
+    }
 
     const submitBtn = document.getElementById("submitBtn");
     submitBtn.disabled = true;
-    submitBtn.textContent = "Creating account…";
+    submitBtn.textContent = "Creating profile…";
 
     try {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await createProfileDoc(cred.user.uid);
+      const uid = auth.currentUser.uid;
+      const role = document.querySelector('input[name="role"]:checked').value;
+      const townId = townSelect.value;
+      await ensureTownDoc(townId);
+      // The one and only write that creates users/{uid} — everything
+      // firestore.rules' create rule requires (role, townId, approved,
+      // everApproved) goes in together, plus the profile/terms/age fields
+      // collected across the steps above.
+      await setDoc(doc(db, "users", uid), {
+        role,
+        townId,
+        approved: false,
+        everApproved: false,
+        profile: { name: document.getElementById("displayName").value.trim() },
+        agreedToTerms: true,
+        agreedToTermsAt: serverTimestamp(),
+        confirmedAge18Plus: true,
+        createdAt: serverTimestamp(),
+        lastActiveAt: serverTimestamp(),
+      });
       location.href = "dashboard.html";
     } catch (err) {
-      showError(friendlyAuthError(err));
+      showError(stepProfile, "Something went wrong creating your profile. Please try again.");
       submitBtn.disabled = false;
-      submitBtn.textContent = "Create Account";
+      submitBtn.textContent = "Create Profile";
     }
   });
 
-  document.getElementById("googleBtn").addEventListener("click", async () => {
-    clearError();
-    if (!validateBeforeSubmit()) return;
-    try {
-      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
-      await createProfileDoc(cred.user.uid);
-      location.href = "dashboard.html";
-    } catch (err) {
-      showError(friendlyAuthError(err));
-    }
-  });
-
-  function friendlyAuthError(err) {
-    const code = err?.code || "";
-    if (code.includes("email-already-in-use")) return "That email already has an account — try logging in instead.";
-    if (code.includes("weak-password")) return "That password is too weak — use at least 6 characters.";
-    if (code.includes("invalid-email")) return "That doesn't look like a valid email address.";
-    if (code.includes("popup-closed-by-user")) return "Google sign-in was closed before finishing.";
-    return "Something went wrong creating your account. Please try again.";
+  async function hasCompleteProfile(uid) {
+    const snap = await getDoc(doc(db, "users", uid));
+    return snap.exists() && !!snap.data()?.profile?.name;
   }
 
-  // If already logged in, skip straight to the dashboard. Unsubscribe after
-  // the first callback — onAuthStateChanged also fires when our OWN
-  // createUserWithEmailAndPassword/signInWithPopup calls below sign someone
-  // in, and redirecting then would race ahead of createProfileDoc() and
-  // navigate away before the profile doc is ever written.
-  const unsubscribe = onAuthStateChanged(auth, (user) => {
-    unsubscribe();
-    if (user) location.href = "dashboard.html";
+  // Guards against re-running this on every onAuthStateChanged firing (it
+  // also fires on a token refresh, not just an actual sign-in) — without
+  // it, a refresh mid-profile-form would reset the visible step back to
+  // "terms" and discard whatever the user had already typed.
+  let lastHandledUid = null;
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      lastHandledUid = null;
+      showStep(stepGoogle);
+      return;
+    }
+    if (user.uid === lastHandledUid) return;
+    lastHandledUid = user.uid;
+
+    if (await hasCompleteProfile(user.uid)) {
+      location.href = "dashboard.html";
+      return;
+    }
+
+    if (preselectRole) {
+      const radio = document.querySelector(`input[name="role"][value="${preselectRole}"]`);
+      if (radio) radio.checked = true;
+    }
+    // Pre-fill from the Google account as a starting point — still editable.
+    if (user.displayName) document.getElementById("displayName").value = user.displayName;
+
+    showStep(stepTerms);
   });
 </script>
 
