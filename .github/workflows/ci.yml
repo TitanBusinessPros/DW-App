@@ -88,6 +88,19 @@ jobs:
             --only auth,firestore,functions \
             "node testing/functions/run-signup-notify-tests.js"
 
+      # DOG_WALKER_VISION_TEST_MODE=1 makes checkImageSafeSearch use a fake,
+      # deterministic SafeSearch result instead of calling the real Vision
+      # API — see that env var's comment in functions/index.js. Never set
+      # this outside a test run.
+      - name: checkImageSafeSearch Cloud Function tests
+        env:
+          DOG_WALKER_VISION_TEST_MODE: "1"
+        run: |
+          firebase emulators:exec \
+            --project dw-app-2beee \
+            --only auth,firestore,storage,functions \
+            "node testing/functions/run-safe-search-tests.js"
+
       - name: End-to-end tests (Playwright, against emulators)
         run: |
           firebase emulators:exec \

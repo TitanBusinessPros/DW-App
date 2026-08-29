@@ -9,10 +9,12 @@
 //   - onNewSignup /
 //     onProfileSubmitted    — push notification to admins on a new/completed signup, ported from
 //                              Town-Talk/Town Fuss
+//   - checkImageSafeSearch  — Cloud Vision moderation on users/walkerProfiles photo uploads only
+//                              (NOT dogs — dog profiles are private to the owner, see
+//                              firestore.rules), ported from Town-Talk/Town Fuss
 //
 // Planned, adapted from patterns in a sibling Firebase project (see docs/ARCHITECTURE.md):
 //   - beforeSignInBlocking  — stamp a users/{uid} stub + lastKnownIp on first sign-in
-//   - checkImageSafeSearch  — Cloud Vision moderation on profile/dog/walker photo uploads
 //   - onBookingRequested    — push notification to the walker on a new booking
 //   - onBookingStatusChange — push notification to the owner on accept/decline
 //   - onFirstMessageNotify  — push notification on the first message in a conversation
@@ -21,16 +23,19 @@
 
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { onRequest } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { defineSecret } = require("firebase-functions/params");
+const { ImageAnnotatorClient } = require("@google-cloud/vision");
 const crypto = require("node:crypto");
 
 initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
+const visionClient = new ImageAnnotatorClient();
 
 const ADMIN_PIN = defineSecret("ADMIN_PIN");
 
@@ -165,12 +170,7 @@ async function sendPushToUser(uid, { type, title, body, clickAction }) {
   }
 }
 
-// Exposed only so testing/functions/ can unit-test this logic directly —
-// sendPushToUser/logInAppNotification are plain helper functions, not
-// Cloud Functions, so Firebase's deploy-time function discovery (which
-// only picks up exports built via onRequest/onCall/onDocument*/onSchedule/
-// etc.) ignores this export entirely; it never becomes a deployed endpoint.
-// Notifies every allowlisted admin that someone new signed up.
+// Notifies every allowlisted admin, resolved to a real uid to push to.
 //
 // Adapted, not a straight port: Town-Talk's admins/{uid} collection is
 // keyed by uid, so it can call sendPushToUser(adminDoc.id, ...) directly.
@@ -180,8 +180,10 @@ async function sendPushToUser(uid, { type, title, body, clickAction }) {
 // resolves email -> uid via the Auth admin SDK (the authoritative source,
 // rather than assuming any particular Firestore field holds it) — and an
 // admin who's never signed in yet simply has no Auth account to resolve,
-// which is expected, not an error, so that admin is just skipped.
-async function notifyAdminsOfSignup(newUid, name) {
+// which is expected, not an error, so that admin is just skipped, and the
+// rest still get notified normally. `excludeUid` skips one admin (e.g. an
+// admin shouldn't be notified about their own signup).
+async function notifyAllAdmins({ type, title, body, clickAction }, excludeUid) {
   const adminsSnap = await db.collection("admins").get();
   if (adminsSnap.empty) return;
 
@@ -192,18 +194,25 @@ async function notifyAdminsOfSignup(newUid, name) {
       try {
         adminUid = (await getAuth().getUserByEmail(email)).uid;
       } catch (err) {
-        console.log(`notifyAdminsOfSignup: admin ${email} has no Auth account yet — skipping push`);
+        console.log(`notifyAllAdmins: admin ${email} has no Auth account yet — skipping push`);
         return;
       }
-      if (adminUid === newUid) return; // don't notify an admin about their own signup
+      if (excludeUid && adminUid === excludeUid) return;
 
-      await sendPushToUser(adminUid, {
-        type: "signup",
-        title: "Dog Walker — New Sign-Up",
-        body: `${name} just signed up and is waiting on approval.`,
-        clickAction: "/dashboard.html",
-      });
+      await sendPushToUser(adminUid, { type, title, body, clickAction });
     })
+  );
+}
+
+async function notifyAdminsOfSignup(newUid, name) {
+  await notifyAllAdmins(
+    {
+      type: "signup",
+      title: "Dog Walker — New Sign-Up",
+      body: `${name} just signed up and is waiting on approval.`,
+      clickAction: "/dashboard.html",
+    },
+    newUid
   );
 }
 
@@ -231,6 +240,110 @@ exports.onProfileSubmitted = onDocumentUpdated("users/{uid}", async (event) => {
   await notifyAdminsOfSignup(uid, after.profile.name);
 });
 
+// Wraps the actual Vision API call behind a seam so tests can exercise the
+// real Storage trigger end-to-end (path matching, flagging decision,
+// Firestore writes, admin notification) without ever calling the real,
+// paid, network-dependent Vision API — which has no local emulator at
+// all, unlike Firestore/Auth/Storage. DOG_WALKER_VISION_TEST_MODE is
+// never set in production, only by testing/functions/run-safe-search-tests.js
+// and its CI step — when unset (always true in production), this calls
+// the real API exactly as it always would.
+async function detectSafeSearch(gcsUri, fileName) {
+  if (process.env.DOG_WALKER_VISION_TEST_MODE === "1") {
+    // Deterministic fake result, driven by the file NAME rather than
+    // gcsUri/actual image bytes, so one test run can cover both a flagged
+    // and an unflagged upload just by choosing what to name the test file.
+    const flagged = fileName.includes("UNSAFE_TEST_TRIGGER");
+    return [
+      {
+        safeSearchAnnotation: flagged
+          ? { adult: "VERY_LIKELY", racy: "VERY_LIKELY" }
+          : { adult: "VERY_UNLIKELY", racy: "VERY_UNLIKELY" },
+      },
+    ];
+  }
+  return visionClient.safeSearchDetection(gcsUri);
+}
+
+// Runs Cloud Vision's SafeSearch on every users/{uid} or walkerProfiles/{uid}
+// photo the moment it's uploaded — first upload AND every re-upload (a
+// Storage trigger fires per file-write event). Scoped to users/ and
+// walkerProfiles/ only, NOT dogs/{dogId} — confirmed with the user: dog
+// profiles are kept private to the owner only (see firestore.rules), so
+// there's no admin-review/approved concept for a dog to pull back into,
+// and no broader-audience exposure this would be protecting against on
+// that path.
+//
+// A flagged image sets approved: false + safeSearchFlag directly on the
+// profile doc — Dog Walker's admin dashboard already queries approved ==
+// false to build its review queue (see docs/ARCHITECTURE.md), so unlike
+// Town-Talk's version, there's no separate reviewQueue collection to also
+// write to here.
+//
+// Never auto-deletes the image or auto-rejects the profile outright —
+// SafeSearch has real false positives (swimwear, medical, art), so a
+// human still makes the actual call; this only makes sure they're the one
+// making it.
+//
+// No explicit region override (Town-Talk needed one for a specific bucket
+// region outlier among its 7 projects) — dw-app-2beee has a single default
+// bucket, so this deploys to the same default region as every other
+// function here. Worth revisiting only if a real deploy ever fails with a
+// region-mismatch error.
+exports.checkImageSafeSearch = onObjectFinalized(async (event) => {
+  const filePath = event.data.name;
+  const contentType = event.data.contentType || "";
+  if (!contentType.startsWith("image/")) return;
+
+  // users/{uid}/{fileName} or walkerProfiles/{uid}/{fileName} — flat paths,
+  // no /images/ subfolder (see storage.rules); dogs/{dogId}/... never matches.
+  const match = filePath.match(/^(users|walkerProfiles)\/([^/]+)\/(.+)$/);
+  if (!match) return; // not a path this feature screens
+  const [, collection, uid, fileName] = match;
+
+  const gcsUri = `gs://${event.data.bucket}/${filePath}`;
+  let safe;
+  try {
+    const [result] = await detectSafeSearch(gcsUri, fileName);
+    safe = result.safeSearchAnnotation;
+  } catch (err) {
+    console.error(`checkImageSafeSearch(${filePath}): Vision API call failed:`, err);
+    return;
+  }
+  if (!safe) return;
+
+  // VERY_UNLIKELY / UNLIKELY / POSSIBLE / LIKELY / VERY_LIKELY — POSSIBLE
+  // is deliberately excluded from triggering a flag (Vision's own docs
+  // note it produces real false positives at that level; LIKELY and up is
+  // where it's actually being confident).
+  const LIKELY_OR_WORSE = new Set(["LIKELY", "VERY_LIKELY"]);
+  const flaggedCategories = ["adult", "racy"].filter((category) => LIKELY_OR_WORSE.has(safe[category]));
+  if (flaggedCategories.length === 0) return;
+
+  const reason = flaggedCategories.map((category) => `${category}: ${safe[category]}`).join(", ");
+  console.warn(`checkImageSafeSearch: FLAGGED ${filePath} — ${reason}`);
+
+  await db.collection(collection).doc(uid).set(
+    {
+      approved: false,
+      safeSearchFlag: { flagged: true, reason, fileName, checkedAt: Timestamp.now() },
+    },
+    { merge: true }
+  );
+
+  await notifyAllAdmins({
+    type: "safesearch",
+    title: "Dog Walker — Flagged Image",
+    body: `An uploaded ${collection === "users" ? "profile" : "walker listing"} photo was flagged (${reason}) and pulled for review.`,
+    clickAction: "/dashboard.html",
+  });
+});
+
+// Exposed only so testing/functions/ can unit-test this logic directly —
+// these are plain helper functions, not Cloud Functions, so Firebase's
+// deploy-time function discovery (which only picks up exports built via
+// onRequest/onCall/onDocument*/onSchedule/etc.) ignores this export
+// entirely; it never becomes a deployed endpoint.
 exports.__testables = { sendPushToUser, logInAppNotification };
 
 // Called from the admin panel embedded in public/dashboard.html once
